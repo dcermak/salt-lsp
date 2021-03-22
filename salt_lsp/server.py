@@ -1,8 +1,9 @@
+from collections import OrderedDict
 import os
 import os.path
 import subprocess
 import shlex
-from typing import Dict, Union, Optional, List
+from typing import Any, Dict, Union, Optional, List
 
 from ruamel import yaml
 from pygls.server import LanguageServer
@@ -20,6 +21,7 @@ from pygls.lsp.types import (
     CompletionList,
     CompletionParams,
     CompletionOptions,
+    Position,
 )
 from pygls.lsp import types
 
@@ -56,6 +58,41 @@ def get_sls_includes(path: str) -> List[str]:
             if file.endswith(".sls")
         ]
     return sls_files
+
+
+def get_lists_parent_node(document: Any, pos: Position):
+    """
+    WIP: this function shall find the parent node of a new list entry
+
+    It sorta kinda works, but it finds the last element that is before pos,
+    however that is not really the node that we actually want.
+    """
+    if not isinstance(document, OrderedDict) and not isinstance(
+        document, list
+    ):
+        # oops, we cannot do a thing with this
+        raise ValueError(
+            f"Expected an ordered dictionary or a list, but got a {type(document)}"
+        )
+
+    entries = (
+        document if isinstance(document, list) else list(document.values())
+    )
+    if len(entries) == 0:
+        return None
+
+    prev = entries[0] if hasattr(entries[0], "lc") else None
+
+    for entry in entries:
+        if hasattr(entry, "lc") and entry.lc.line > pos.line:
+            break
+        prev = entry
+
+    if isinstance(prev, list) or isinstance(prev, OrderedDict):
+        res = get_lists_parent_node(prev, pos)
+        return res or prev
+
+    return prev
 
 
 class SaltServer(LanguageServer):
@@ -95,8 +132,15 @@ salt_server = SaltServer()
 
 
 @salt_server.feature(COMPLETION, CompletionOptions(trigger_characters=["-"]))
-def completions(params: CompletionParams):
+def completions(ls: SaltServer, params: CompletionParams):
     """Returns completion items."""
+    file_contents = ls.get_file_contents(params.text_document.uri)
+    if file_contents is None:
+        # FIXME: load the file
+        return
+
+    print(get_lists_parent_node(file_contents, params.position))
+
     return CompletionList(
         is_incomplete=False,
         items=[
