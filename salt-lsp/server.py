@@ -27,7 +27,7 @@ def get_git_root(path: str) -> str:
     return subprocess.run(shlex.split("git rev-parse --show-toplevel")).stdout
 
 
-def get_top(path: str) -> str:
+def get_top(path: str) -> Optional[str]:
     parent = os.path.dirname(path)
     if not bool(parent):
         return None
