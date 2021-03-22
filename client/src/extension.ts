@@ -47,15 +47,26 @@ function isStartedInDebugMode(): boolean {
   return process.env.VSCODE_DEBUG_MODE === "true";
 }
 
+let clientSocket: net.Socket;
+
 function startLangServerTCP(addr: number): LanguageClient {
   const serverOptions: ServerOptions = () => {
     return new Promise((resolve) => {
-      const clientSocket = new net.Socket();
+      clientSocket = new net.Socket();
+
       clientSocket.connect(addr, "127.0.0.1", () => {
         resolve({
           reader: clientSocket,
           writer: clientSocket,
         });
+      });
+
+      clientSocket.on("close", () => {
+        console.log("Connection closed");
+        setTimeout(() => {
+          clientSocket.connect(addr, "127.0.0.1");
+          console.log("Connection re-established");
+        }, 1000);
       });
     });
   };
