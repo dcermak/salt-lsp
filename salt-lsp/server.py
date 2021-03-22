@@ -1,8 +1,9 @@
 import os.path
 import subprocess
 import shlex
-from typing import Any
+from typing import Any, Dict, Union, Optional
 
+import yaml
 from pygls.server import LanguageServer
 from pygls.capabilities import (
     COMPLETION,
@@ -50,16 +51,24 @@ class SaltServer(LanguageServer):
     def __init__(self) -> None:
         super().__init__()
 
-        self.files: list[SaltFile] = []
+        self.files: Dict[str, SaltFile] = {}
 
 
 salt_server = SaltServer()
 
 
 class SaltFile:
-    def __init__(self, uri: str, contents: Any) -> None:
-        self._uri = uri
-        self.contents = contents
+    def __init__(
+        self,
+        params: Union[
+            types.DidOpenTextDocumentParams, types.DidChangeTextDocumentParams
+        ],
+    ) -> None:
+        self._uri = params.text_document.uri
+        try:
+            self.contents = yaml.safe_load(params.text_document.text)
+        except Exception:
+            self.contents = None
 
 
 @salt_server.feature(COMPLETION, CompletionOptions(trigger_characters=["-"]))
@@ -79,19 +88,17 @@ def completions(params: CompletionParams):
 def on_did_change(
     ls: LanguageServer, params: types.DidChangeTextDocumentParams
 ):
-    print(params)
+    ls.files[params.text_document.uri] = SaltFile(params)
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls: SaltServer, params: types.DidCloseTextDocumentParams):
     """Text document did close notification."""
-    ls.show_message("Text Document Did Close", msg_type=MessageType.Error)
+    del ls.files[params.text_document.uri]
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls: SaltServer, params: types.DidOpenTextDocumentParams):
     """Text document did open notification."""
-    ls.files.append(
-        SaltFile(params.text_document.uri, params.text_document.text)
-    )
-    print(params)
+    ls.files[params.text_document.uri] = SaltFile(params)
+    print(ls.files[params.text_document.uri].contents)

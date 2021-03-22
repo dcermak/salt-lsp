@@ -1,1 +1,2 @@
 pygls >= v0.10
+PyYAML >= 5
