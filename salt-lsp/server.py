@@ -2,7 +2,7 @@ import os
 import os.path
 import subprocess
 import shlex
-from typing import Any, Dict, Union, Optional, List
+from typing import Dict, Union, Optional, List
 
 import yaml
 from pygls.server import LanguageServer
@@ -20,7 +20,6 @@ from pygls.lsp.types import (
     CompletionList,
     CompletionParams,
     CompletionOptions,
-    MessageType,
 )
 from pygls.lsp import types
 
