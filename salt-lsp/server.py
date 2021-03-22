@@ -1,3 +1,4 @@
+import os.path
 import subprocess
 import shlex
 from typing import Any
@@ -22,8 +23,24 @@ from pygls.lsp.types import (
 from pygls.lsp import types
 
 
-def get_root(path: str) -> str:
+def get_git_root(path: str) -> str:
     return subprocess.run(shlex.split("git rev-parse --show-toplevel")).stdout
+
+
+def get_top(path: str) -> str:
+    parent = os.path.dirname(path)
+    if not bool(parent):
+        return None
+    if os.path.isfile(os.path.join(parent, "top.sls")):
+        return parent
+    return get_top(parent)
+
+
+def get_root(path: str) -> str:
+    root = get_top(path)
+    if not root:
+        return root
+    return get_git_root(path)
 
 
 class SaltServer(LanguageServer):
