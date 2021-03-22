@@ -3,7 +3,9 @@ import shlex
 from typing import Any
 
 from pygls.server import LanguageServer
-from pygls.capabilities import COMPLETION
+from pygls.capabilities import (
+    COMPLETION,
+)
 from pygls.lsp.methods import (
     TEXT_DOCUMENT_DID_CHANGE,
     TEXT_DOCUMENT_DID_CLOSE,
@@ -11,13 +13,13 @@ from pygls.lsp.methods import (
 )
 from pygls.lsp.types import (
     CompletionItem,
+    CompletionItemKind,
     CompletionList,
     CompletionParams,
     CompletionOptions,
+    MessageType,
 )
 from pygls.lsp import types
-
-# import pygls.types
 
 
 def get_root(path: str) -> str:
@@ -42,13 +44,13 @@ class SaltFile:
         self.contents = contents
 
 
-@salt_server.feature(COMPLETION, CompletionOptions(triggerCharacters=["-"]))
+@salt_server.feature(COMPLETION, CompletionOptions(trigger_characters=["-"]))
 def completions(params: CompletionParams):
     """Returns completion items."""
     return CompletionList(
         is_incomplete=False,
-        item=[
-            CompletionItem(label="Item1"),
+        items=[
+            CompletionItem(label="Item1", kind=CompletionItemKind.Text),
             CompletionItem(label="Item2"),
             CompletionItem(label="Item3"),
         ],
@@ -63,9 +65,9 @@ def on_did_change(
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CLOSE)
-def did_close(server: SaltServer, params: types.DidCloseTextDocumentParams):
+def did_close(ls: SaltServer, params: types.DidCloseTextDocumentParams):
     """Text document did close notification."""
-    server.show_message("Text Document Did Close")
+    ls.show_message("Text Document Did Close", msg_type=MessageType.Error)
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
