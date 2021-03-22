@@ -41,9 +41,7 @@ def get_top(path: str) -> Optional[str]:
 
 def get_root(path: str) -> str:
     root = get_top(path)
-    if not root:
-        return root
-    return get_git_root(path)
+    return root or get_git_root(path)
 
 
 class SaltServer(LanguageServer):
