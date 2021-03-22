@@ -4,9 +4,19 @@ from typing import Any
 
 from pygls.server import LanguageServer
 from pygls.capabilities import COMPLETION
-from pygls.lsp.methods import *
-from pygls.lsp.types import CompletionItem, CompletionList, CompletionParams, CompletionOptions
+from pygls.lsp.methods import (
+    TEXT_DOCUMENT_DID_CHANGE,
+    TEXT_DOCUMENT_DID_CLOSE,
+    TEXT_DOCUMENT_DID_OPEN,
+)
+from pygls.lsp.types import (
+    CompletionItem,
+    CompletionList,
+    CompletionParams,
+    CompletionOptions,
+)
 from pygls.lsp import types
+
 # import pygls.types
 
 
@@ -32,32 +42,36 @@ class SaltFile:
         self.contents = contents
 
 
-@salt_server.feature(COMPLETION, CompletionOptions(triggerCharacters=['-']))
+@salt_server.feature(COMPLETION, CompletionOptions(triggerCharacters=["-"]))
 def completions(params: CompletionParams):
     """Returns completion items."""
     return CompletionList(
         is_incomplete=False,
         item=[
-            CompletionItem(label='Item1'),
-            CompletionItem(label='Item2'),
-            CompletionItem(label='Item3'),
-        ]
+            CompletionItem(label="Item1"),
+            CompletionItem(label="Item2"),
+            CompletionItem(label="Item3"),
+        ],
     )
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CHANGE)
-def on_did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
+def on_did_change(
+    ls: LanguageServer, params: types.DidChangeTextDocumentParams
+):
     print(params)
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CLOSE)
 def did_close(server: SaltServer, params: types.DidCloseTextDocumentParams):
     """Text document did close notification."""
-    server.show_message('Text Document Did Close')
+    server.show_message("Text Document Did Close")
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls: SaltServer, params: types.DidOpenTextDocumentParams):
     """Text document did open notification."""
-    ls.files.append(SaltFile(params.text_document.uri, params.text_document.text))
+    ls.files.append(
+        SaltFile(params.text_document.uri, params.text_document.text)
+    )
     print(params)
