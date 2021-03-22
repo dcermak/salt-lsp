@@ -1,2 +1,2 @@
 pygls >= v0.10
-PyYAML >= 5
+ruamel.yaml >= 0.16

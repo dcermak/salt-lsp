@@ -4,7 +4,7 @@ import subprocess
 import shlex
 from typing import Dict, Union, Optional, List
 
-import yaml
+from ruamel import yaml
 from pygls.server import LanguageServer
 from pygls.capabilities import (
     COMPLETION,
@@ -64,24 +64,34 @@ class SaltServer(LanguageServer):
     def __init__(self) -> None:
         super().__init__()
 
-        self.files: Dict[str, SaltFile] = {}
+        self._files: Dict[str, Any] = {}
 
+    def remove_file(self, params: types.DidCloseTextDocumentParams) -> None:
+        del self._files[params.text_document.uri]
 
-salt_server = SaltServer()
-
-
-class SaltFile:
-    def __init__(
+    def register_file(
         self,
         params: Union[
             types.DidOpenTextDocumentParams, types.DidChangeTextDocumentParams
         ],
     ) -> None:
-        self._uri = params.text_document.uri
         try:
-            self.contents = yaml.safe_load(params.text_document.text)
+            contents = yaml.load(
+                params.text_document.text, Loader=yaml.RoundTripLoader
+            )
         except Exception:
-            self.contents = None
+            return
+
+        assert contents is not None
+        self._files[params.text_document.uri] = contents
+
+    def get_file_contents(self, uri: str) -> Optional[Any]:
+        if uri in self._files:
+            return self._files[uri]
+        return None
+
+
+salt_server = SaltServer()
 
 
 @salt_server.feature(COMPLETION, CompletionOptions(trigger_characters=["-"]))
@@ -98,10 +108,8 @@ def completions(params: CompletionParams):
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CHANGE)
-def on_did_change(
-    ls: LanguageServer, params: types.DidChangeTextDocumentParams
-):
-    ls.files[params.text_document.uri] = SaltFile(params)
+def on_did_change(ls: SaltServer, params: types.DidChangeTextDocumentParams):
+    ls.register_file(params)
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CLOSE)
@@ -113,5 +121,4 @@ def did_close(ls: SaltServer, params: types.DidCloseTextDocumentParams):
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls: SaltServer, params: types.DidOpenTextDocumentParams):
     """Text document did open notification."""
-    ls.files[params.text_document.uri] = SaltFile(params)
-    print(ls.files[params.text_document.uri].contents)
+    ls.register_file(params)
