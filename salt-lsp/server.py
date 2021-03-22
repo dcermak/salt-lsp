@@ -2,7 +2,7 @@ import os
 import os.path
 import subprocess
 import shlex
-from typing import Any, Dict, Union, Optional
+from typing import Any, Dict, Union, Optional, List
 
 import yaml
 from pygls.server import LanguageServer
@@ -46,7 +46,7 @@ def get_root(path: str) -> str:
     return root or get_git_root(path)
 
 
-def get_sls_includes(path: str) -> list[str]:
+def get_sls_includes(path: str) -> List[str]:
     sls_files = []
     top = get_root(path)
     for root, _, files in os.walk(top):
