@@ -7,7 +7,12 @@
     "rootDir": "client/src",
     "outDir": "client/out",
     "lib": ["es6"],
-    "types": [],
+    "types": ["node"],
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedParameters": true,
+    "moduleResolution": "node",
     "skipLibCheck": true
   },
   "exclude": ["node_modules"]

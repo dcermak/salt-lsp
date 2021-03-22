@@ -16,12 +16,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * ----------------------------------------------------------------------- */
-"use strict";
 
 import * as net from "net";
 import * as path from "path";
 import { ExtensionContext, workspace } from "vscode";
-import { LanguageClient, LanguageClientOptions, ServerOptions } from "vscode-languageclient";
+import {
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+} from "vscode-languageclient/node";
 
 let client: LanguageClient;
 
@@ -46,7 +49,7 @@ function isStartedInDebugMode(): boolean {
 
 function startLangServerTCP(addr: number): LanguageClient {
   const serverOptions: ServerOptions = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const clientSocket = new net.Socket();
       clientSocket.connect(addr, "127.0.0.1", () => {
         resolve({
@@ -57,11 +60,17 @@ function startLangServerTCP(addr: number): LanguageClient {
     });
   };
 
-  return new LanguageClient(`tcp lang server (port ${addr})`, serverOptions, getClientOptions());
+  return new LanguageClient(
+    `tcp lang server (port ${addr})`,
+    serverOptions,
+    getClientOptions()
+  );
 }
 
 function startLangServer(
-  command: string, args: string[], cwd: string,
+  command: string,
+  args: string[],
+  cwd: string
 ): LanguageClient {
   const serverOptions: ServerOptions = {
     args,
@@ -79,7 +88,9 @@ export function activate(context: ExtensionContext) {
   } else {
     // Production - Client is going to run the server (for use within `.vsix` package)
     const cwd = path.join(__dirname, "..", "..");
-    const pythonPath = workspace.getConfiguration("python").get<string>("pythonPath");
+    const pythonPath = workspace
+      .getConfiguration("python")
+      .get<string>("pythonPath");
 
     if (!pythonPath) {
       throw new Error("`python.pythonPath` is not set");
