@@ -11,7 +11,7 @@ Setup & start the server:
 $ python3 -m venv .env3
 $ . .env3/bin/activate
 $ pip install -r requirements.txt
-$ python3 salt-lsp/__main__.py --tcp
+$ python3 salt_lsp/__main__.py --tcp
 ```
 
 Launch the client:
