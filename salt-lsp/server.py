@@ -24,7 +24,10 @@ from pygls.lsp import types
 
 
 def get_git_root(path: str) -> str:
-    return subprocess.run(shlex.split("git rev-parse --show-toplevel")).stdout
+    return str(
+        subprocess.run(shlex.split("git rev-parse --show-toplevel")).stdout,
+        encoding="utf-8",
+    )
 
 
 def get_top(path: str) -> Optional[str]:
