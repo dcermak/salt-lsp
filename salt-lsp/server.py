@@ -50,8 +50,12 @@ def get_sls_includes(path: str) -> list[str]:
     sls_files = []
     top = get_root(path)
     for root, _, files in os.walk(top):
-        base = root[len(top) + 1:].replace(os.path.sep, ".")
-        sls_files += [base + (file[:-4] if file != "init.sls" else "") for file in files if file.endswith(".sls")]
+        base = root[len(top) + 1 :].replace(os.path.sep, ".")
+        sls_files += [
+            base + (file[:-4] if file != "init.sls" else "")
+            for file in files
+            if file.endswith(".sls")
+        ]
     return sls_files
 
 
