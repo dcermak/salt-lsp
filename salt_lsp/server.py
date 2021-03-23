@@ -136,7 +136,9 @@ def completions(ls: SaltServer, params: CompletionParams):
         includes = utils.get_sls_includes(file_path)
         return CompletionList(
             is_incomplete=False,
-            items=[CompletionItem(label=f" {include}") for include in includes],
+            items=[
+                CompletionItem(label=f" {include}") for include in includes
+            ],
         )
 
     return CompletionList(

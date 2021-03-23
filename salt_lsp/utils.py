@@ -56,10 +56,14 @@ def get_sls_includes(path: str) -> List[str]:
 def _construct_path_to_position(
     document: Any, pos: Position, cur_path: List[Union[str, int]]
 ) -> Optional[List[Union[str, int]]]:
-    if not isinstance(document, OrderedDict) and not isinstance(document, list):
+    if not isinstance(document, OrderedDict) and not isinstance(
+        document, list
+    ):
         return None
 
-    entries = document if isinstance(document, list) else list(document.values())
+    entries = (
+        document if isinstance(document, list) else list(document.values())
+    )
     if len(entries) == 0:
         return cur_path
 
@@ -102,8 +106,12 @@ def _construct_path_to_position(
     return cur_path
 
 
-def construct_path_to_position(document: Any, pos: Position) -> List[Union[str, int]]:
-    if not isinstance(document, OrderedDict) and not isinstance(document, list):
+def construct_path_to_position(
+    document: Any, pos: Position
+) -> List[Union[str, int]]:
+    if not isinstance(document, OrderedDict) and not isinstance(
+        document, list
+    ):
         # oops, we cannot do a thing with this
         raise ValueError(
             f"Expected an ordered dictionary or a list, but got a {type(document)}"
