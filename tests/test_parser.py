@@ -14,6 +14,7 @@ MASTER_DOT_SLS = """saltmaster.packages:
       - git
     - require:
       - file: /etc/foo/bar.conf
+      - 
 
 git -C /srv/salt pull -q:
   cron.present:
@@ -57,6 +58,7 @@ class TestPathToPosition:
         expected_res = [
             "saltmaster.packages",
             "pkg.installed",
+            0,
             "pkgs",
         ]
         for line in (3, 4, 5):
@@ -69,9 +71,10 @@ class TestPathToPosition:
 
     def test_path_to_require(self):
         assert construct_path_to_position(
-            SLS_PARSED, Position(line=7, character=7)
+            SLS_PARSED, Position(line=8, character=7)
         ) == [
             "saltmaster.packages",
             "pkg.installed",
+            1,
             "require",
         ]

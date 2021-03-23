@@ -61,38 +61,41 @@ def get_sls_includes(path: str) -> List[str]:
 
 
 def _construct_path_to_position(
-    document: Any, pos: Position, cur_path: List[str]
-) -> Optional[List[str]]:
+    document: Any, pos: Position, cur_path: List[Union[str, int]]
+) -> Optional[List[Union[str, int]]]:
     if not isinstance(document, OrderedDict) and not isinstance(
         document, list
     ):
         return None
 
-    entries = document if isinstance(document, list) else list(document.values())
+    entries = (
+        document if isinstance(document, list) else list(document.values())
+    )
     if len(entries) == 0:
         return cur_path
 
     prev = entries[0] if hasattr(entries[0], "lc") else None
+    prev_ind = 0
 
     for ind, entry in enumerate(entries):
         if hasattr(entry, "lc") and entry.lc.line > pos.line:
             break
         prev = entry
+        prev_ind = ind
 
-    print(ind, prev)
-    if hasattr(prev, "lc"):
-        print(prev.lc.line, prev.lc.col)
-
+    # add the current node to the path list
     if isinstance(document, OrderedDict):
-        if hasattr(prev, "lc"):
-            if prev.lc.line == pos.line and pos.character > prev.lc.col:
-                cur_path.append(list(document.keys())[max(ind - 1, 0)])
+        cur_path.append(list(document.keys())[prev_ind])
+    elif isinstance(document, list):
+        cur_path.append(prev_ind)
 
     if isinstance(prev, list) or isinstance(prev, OrderedDict):
         return _construct_path_to_position(prev, pos, cur_path)
 
+    # we should have only primitive types now
     assert (
-        isinstance(prev, str)
+        prev is None
+        or isinstance(prev, str)
         or isinstance(prev, bool)
         or isinstance(prev, int)
         or isinstance(prev, float)
@@ -100,12 +103,17 @@ def _construct_path_to_position(
         "expected to reach a leaf node that must be a primitive type, "
         + f"but got a '{type(prev)}' instead"
     )
+    # if we are in a YAML list of primitive types (i.e. the last list entry is
+    # the list index), then we will not be able to get the correct list index
+    # as ruamel.yaml does not store the positions of primitive types
+    if isinstance(cur_path[-1], int):
+        cur_path.pop()
     return cur_path
 
 
 def construct_path_to_position(
     document: Any, pos: Position
-) -> Optional[List[str]]:
+) -> List[Union[str, int]]:
     if not isinstance(document, OrderedDict) and not isinstance(
         document, list
     ):
@@ -114,7 +122,7 @@ def construct_path_to_position(
             f"Expected an ordered dictionary or a list, but got a {type(document)}"
         )
 
-    return _construct_path_to_position(document, pos, [])
+    return _construct_path_to_position(document, pos, []) or []
 
 
 def position_to_index(text, line, column):
@@ -147,7 +155,9 @@ class SaltServer(LanguageServer):
             content = self._files[params.text_document.uri]
             for change in params.content_changes:
                 start = position_to_index(
-                    content, change.range.start.line, change.range.start.character
+                    content,
+                    change.range.start.line,
+                    change.range.start.character,
                 )
                 end = position_to_index(
                     content, change.range.end.line, change.range.end.character
