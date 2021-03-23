@@ -1,4 +1,4 @@
-from salt_lsp.server import construct_path_to_position
+from salt_lsp.utils import construct_path_to_position
 
 from ruamel import yaml
 from pygls.lsp.types import (
