@@ -5,7 +5,7 @@ import logging
 import pickle
 from os.path import dirname, abspath, join
 
-from server import salt_server
+from salt_lsp.server import salt_server
 
 logging.basicConfig(
     filename="salt-server.log", level=logging.DEBUG, filemode="w"

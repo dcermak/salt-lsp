@@ -7,8 +7,6 @@ import re
 from typing import Any, Dict, List, Optional
 import urllib.parse
 
-from .base_types import StateNameCompletion
-
 from ruamel import yaml
 from pygls.server import LanguageServer
 from pygls.capabilities import (
@@ -29,6 +27,7 @@ from pygls.lsp.types import (
 from pygls.lsp import types
 
 import salt_lsp.utils as utils
+from salt_lsp.base_types import StateNameCompletion
 
 
 class SaltServer(LanguageServer):

@@ -8,7 +8,7 @@ from os import mkdir
 from os.path import join, abspath, dirname
 from typing import Dict
 
-from base_types import StateNameCompletion
+from salt_lsp.base_types import StateNameCompletion
 
 
 if __name__ == "__main__":
