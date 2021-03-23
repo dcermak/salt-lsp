@@ -67,17 +67,13 @@ def get_lists_parent_node(document: Any, pos: Position):
     It sorta kinda works, but it finds the last element that is before pos,
     however that is not really the node that we actually want.
     """
-    if not isinstance(document, OrderedDict) and not isinstance(
-        document, list
-    ):
+    if not isinstance(document, OrderedDict) and not isinstance(document, list):
         # oops, we cannot do a thing with this
         raise ValueError(
             f"Expected an ordered dictionary or a list, but got a {type(document)}"
         )
 
-    entries = (
-        document if isinstance(document, list) else list(document.values())
-    )
+    entries = document if isinstance(document, list) else list(document.values())
     if len(entries) == 0:
         return None
 
@@ -95,6 +91,11 @@ def get_lists_parent_node(document: Any, pos: Position):
     return prev
 
 
+def position_to_index(text, line, column):
+    split = text.splitlines(keepends=True)
+    return sum([len(l) for i, l in enumerate(split) if i < line]) + column
+
+
 class SaltServer(LanguageServer):
     """Experimental language server for salt states"""
 
@@ -108,23 +109,34 @@ class SaltServer(LanguageServer):
 
     def register_file(
         self,
-        params: Union[
-            types.DidOpenTextDocumentParams, types.DidChangeTextDocumentParams
-        ],
+        params: types.DidOpenTextDocumentParams,
     ) -> None:
-        try:
-            contents = yaml.load(
-                params.text_document.text, Loader=yaml.RoundTripLoader
-            )
-        except Exception:
-            return
+        self._files[params.text_document.uri] = params.text_document.text
 
-        assert contents is not None
-        self._files[params.text_document.uri] = contents
+    def reconcile_file(
+        self,
+        params: types.DidChangeTextDocumentParams,
+    ) -> None:
+        if params.text_document.uri in self._files:
+            content = self._files[params.text_document.uri]
+            for change in params.content_changes:
+                start = position_to_index(
+                    content, change.range.start.line, change.range.start.character
+                )
+                end = position_to_index(
+                    content, change.range.end.line, change.range.end.character
+                )
+                self._files[params.text_document.uri] = (
+                    content[:start] + change.text + content[end:]
+                )
 
     def get_file_contents(self, uri: str) -> Optional[Any]:
         if uri in self._files:
-            return self._files[uri]
+            try:
+                content = self._files[uri]
+                return yaml.load(content, Loader=yaml.RoundTripLoader)
+            except Exception:
+                return None
         return None
 
 
@@ -153,7 +165,7 @@ def completions(ls: SaltServer, params: CompletionParams):
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CHANGE)
 def on_did_change(ls: SaltServer, params: types.DidChangeTextDocumentParams):
-    ls.register_file(params)
+    ls.reconcile_file(params)
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CLOSE)
