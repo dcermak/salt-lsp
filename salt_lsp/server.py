@@ -53,7 +53,7 @@ class SaltServer(LanguageServer):
             for change in params.content_changes:
                 if not hasattr(change, "range"):
                     continue
-                assert isinstance(change, TextDocumentContentChangeEvent)
+                assert isinstance(change, types.TextDocumentContentChangeEvent)
                 if change.range is None:
                     continue
                 start = utils.position_to_index(

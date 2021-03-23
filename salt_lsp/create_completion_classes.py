@@ -44,6 +44,7 @@ with tempfile.TemporaryDirectory() as tmpdirname:
                     "baredoc.list_states"
                 ),
                 capture_output=True,
+                check=True,
             ).stdout,
             encoding="utf-8",
         )
