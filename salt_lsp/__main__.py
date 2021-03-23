@@ -2,6 +2,8 @@
 
 import argparse
 import logging
+import pickle
+from os.path import dirname, abspath, join
 
 from server import salt_server
 
@@ -28,6 +30,12 @@ def main():
     parser = argparse.ArgumentParser()
     add_arguments(parser)
     args = parser.parse_args()
+
+    with open(
+        join(dirname(abspath(__file__)), "states.pickle"), "rb"
+    ) as states_file:
+        states = pickle.load(states_file)
+    salt_server.post_init(states)
 
     if args.tcp:
         salt_server.start_tcp(args.host, args.port)

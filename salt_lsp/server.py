@@ -149,6 +149,15 @@ class SaltServer(LanguageServer):
         super().__init__()
 
         self._files: Dict[str, Any] = {}
+        self._state_name_completions: Optional[
+            Dict[str, StateNameCompletion]
+        ] = None
+
+    def post_init(
+        self, state_name_completions: Dict[str, StateNameCompletion]
+    ) -> None:
+        self._state_name_completions = state_name_completions
+        self._state_names = list(state_name_completions.keys())
 
     def remove_file(self, params: types.DidCloseTextDocumentParams) -> None:
         del self._files[params.text_document.uri]
