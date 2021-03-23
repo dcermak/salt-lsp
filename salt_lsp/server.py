@@ -60,13 +60,54 @@ def get_sls_includes(path: str) -> List[str]:
     return sls_files
 
 
-def get_lists_parent_node(document: Any, pos: Position):
-    """
-    WIP: this function shall find the parent node of a new list entry
+def _construct_path_to_position(
+    document: Any, pos: Position, cur_path: List[str]
+) -> Optional[List[str]]:
+    if not isinstance(document, OrderedDict) and not isinstance(
+        document, list
+    ):
+        return None
 
-    It sorta kinda works, but it finds the last element that is before pos,
-    however that is not really the node that we actually want.
-    """
+    entries = (
+        document if isinstance(document, list) else list(document.values())
+    )
+    if len(entries) == 0:
+        return cur_path
+
+    prev = entries[0] if hasattr(entries[0], "lc") else None
+
+    for ind, entry in enumerate(entries):
+        if hasattr(entry, "lc") and entry.lc.line > pos.line:
+            break
+        prev = entry
+
+    print(ind, prev)
+    if hasattr(prev, "lc"):
+        print(prev.lc.line, prev.lc.col)
+
+    if isinstance(document, OrderedDict):
+        if hasattr(prev, "lc"):
+            if prev.lc.line == pos.line and pos.character > prev.lc.col:
+                cur_path.append(list(document.keys())[max(ind - 1, 0)])
+
+    if isinstance(prev, list) or isinstance(prev, OrderedDict):
+        return _construct_path_to_position(prev, pos, cur_path)
+
+    assert (
+        isinstance(prev, str)
+        or isinstance(prev, bool)
+        or isinstance(prev, int)
+        or isinstance(prev, float)
+    ), (
+        "expected to reach a leaf node that must be a primitive type, "
+        + f"but got a '{type(prev)}' instead"
+    )
+    return cur_path
+
+
+def construct_path_to_position(
+    document: Any, pos: Position
+) -> Optional[List[str]]:
     if not isinstance(document, OrderedDict) and not isinstance(
         document, list
     ):
@@ -75,24 +116,7 @@ def get_lists_parent_node(document: Any, pos: Position):
             f"Expected an ordered dictionary or a list, but got a {type(document)}"
         )
 
-    entries = (
-        document if isinstance(document, list) else list(document.values())
-    )
-    if len(entries) == 0:
-        return None
-
-    prev = entries[0] if hasattr(entries[0], "lc") else None
-
-    for entry in entries:
-        if hasattr(entry, "lc") and entry.lc.line > pos.line:
-            break
-        prev = entry
-
-    if isinstance(prev, list) or isinstance(prev, OrderedDict):
-        res = get_lists_parent_node(prev, pos)
-        return res or prev
-
-    return prev
+    return _construct_path_to_position(document, pos, [])
 
 
 class SaltServer(LanguageServer):
@@ -139,7 +163,7 @@ def completions(ls: SaltServer, params: CompletionParams):
         # FIXME: load the file
         return
 
-    print(get_lists_parent_node(file_contents, params.position))
+    print(construct_path_to_position(file_contents, params.position))
 
     return CompletionList(
         is_incomplete=False,
