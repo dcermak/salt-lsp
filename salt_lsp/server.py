@@ -3,8 +3,11 @@ import os
 import os.path
 import subprocess
 import shlex
+import re
 from typing import Any, Dict, Union, Optional, List
 import urllib.parse
+
+from .base_types import StateNameCompletion
 
 from ruamel import yaml
 from pygls.server import LanguageServer
@@ -22,6 +25,7 @@ from pygls.lsp.types import (
     CompletionList,
     CompletionParams,
     CompletionOptions,
+    TextDocumentContentChangeEvent,
     Position,
 )
 from pygls.lsp import types
@@ -145,6 +149,8 @@ def position_to_index(text: str, line: int, column: int) -> int:
 class SaltServer(LanguageServer):
     """Experimental language server for salt states"""
 
+    LINE_START_REGEX = re.compile(r"^(\s*)\b", re.MULTILINE)
+
     def __init__(self) -> None:
         super().__init__()
 
@@ -158,6 +164,23 @@ class SaltServer(LanguageServer):
     ) -> None:
         self._state_name_completions = state_name_completions
         self._state_names = list(state_name_completions.keys())
+
+    def complete_state_name(self, params: types.CompletionParams) -> List[str]:
+        assert params.context.trigger_character == "."
+        if self._state_name_completions is None:
+            # FIXME: log an error
+            return []
+
+        contents = self._files[params.text_document.uri]
+        ind = position_to_index(
+            contents, params.position.line, params.position.character
+        )
+        print(SaltServer.LINE_START_REGEX.search(contents, 0, ind))
+        last_match = SaltServer.LINE_START_REGEX.search(contents[:ind])
+
+        state_name = contents[last_match.span()[1] : ind - 1]
+        completer = self._state_name_completions[state_name]
+        return completer.provide_subname_completion()
 
     def remove_file(self, params: types.DidCloseTextDocumentParams) -> None:
         del self._files[params.text_document.uri]
@@ -205,13 +228,18 @@ class SaltServer(LanguageServer):
 salt_server = SaltServer()
 
 
-@salt_server.feature(COMPLETION, CompletionOptions(trigger_characters=["-"]))
+@salt_server.feature(
+    COMPLETION, CompletionOptions(trigger_characters=["-", "."])
+)
 def completions(ls: SaltServer, params: CompletionParams):
     """Returns completion items."""
     file_contents = ls.get_file_contents(params.text_document.uri)
     if file_contents is None:
         # FIXME: load the file
         return
+
+    if params.context.trigger_character == ".":
+        return ls.complete_state_name(params)
 
     path = construct_path_to_position(file_contents, params.position)
     if (
