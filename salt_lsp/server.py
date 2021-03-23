@@ -232,7 +232,7 @@ def on_did_change(ls: SaltServer, params: types.DidChangeTextDocumentParams):
 @salt_server.feature(TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls: SaltServer, params: types.DidCloseTextDocumentParams):
     """Text document did close notification."""
-    del ls.files[params.text_document.uri]
+    ls.remove_file(params)
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
