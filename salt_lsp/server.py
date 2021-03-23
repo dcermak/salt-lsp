@@ -166,6 +166,11 @@ class SaltServer(LanguageServer):
         if params.text_document.uri in self._files:
             content = self._files[params.text_document.uri]
             for change in params.content_changes:
+                if not hasattr(change, "range"):
+                    continue
+                assert isinstance(change, TextDocumentContentChangeEvent)
+                if change.range is None:
+                    continue
                 start = position_to_index(
                     content,
                     change.range.start.line,
