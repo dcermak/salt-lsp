@@ -1,2 +1,3 @@
 pygls >= v0.10
 ruamel.yaml >= 0.16
+pytest
