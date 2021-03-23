@@ -74,34 +74,42 @@ def _construct_path_to_position(
     if len(entries) == 0:
         return cur_path
 
-    prev = entries[0] if hasattr(entries[0], "lc") else None
-    prev_ind = 0
+    match = entries[0] if hasattr(entries[0], "lc") else None
+    match_ind = 0
 
+    # Iterate over all entries in the document and find the first that is
+    # beyond the given position. Store the entry *before* that one in match and
+    # its index in match_index.
+    # Special case: if we hit the exact line, then that is the match and not
+    # the previous one
     for ind, entry in enumerate(entries):
-        if hasattr(entry, "lc") and entry.lc.line > pos.line:
+        # entry can be a primitive type and will have no position information
+        # then => have to skip over these for lack of better knowledge
+        if hasattr(entry, "lc") and entry.lc.line >= pos.line:
+            if entry.lc.line == pos.line:
+                match, match_ind = entry, ind
             break
-        prev = entry
-        prev_ind = ind
+        match, match_ind = entry, ind
 
     # add the current node to the path list
     if isinstance(document, OrderedDict):
-        cur_path.append(list(document.keys())[prev_ind])
+        cur_path.append(list(document.keys())[match_ind])
     elif isinstance(document, list):
-        cur_path.append(prev_ind)
+        cur_path.append(match_ind)
 
-    if isinstance(prev, list) or isinstance(prev, OrderedDict):
-        return _construct_path_to_position(prev, pos, cur_path)
+    if isinstance(match, list) or isinstance(match, OrderedDict):
+        return _construct_path_to_position(match, pos, cur_path)
 
     # we should have only primitive types now
     assert (
-        prev is None
-        or isinstance(prev, str)
-        or isinstance(prev, bool)
-        or isinstance(prev, int)
-        or isinstance(prev, float)
+        match is None
+        or isinstance(match, str)
+        or isinstance(match, bool)
+        or isinstance(match, int)
+        or isinstance(match, float)
     ), (
         "expected to reach a leaf node that must be a primitive type, "
-        + f"but got a '{type(prev)}' instead"
+        + f"but got a '{type(match)}' instead"
     )
     # if we are in a YAML list of primitive types (i.e. the last list entry is
     # the list index), then we will not be able to get the correct list index
