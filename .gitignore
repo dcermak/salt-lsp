@@ -131,3 +131,5 @@ dmypy.json
 node_modules
 client/out/
 .env3/
+
+salt_lsp/states.pickle
