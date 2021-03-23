@@ -200,12 +200,18 @@ def completions(ls: SaltServer, params: CompletionParams):
         return
 
     path = construct_path_to_position(file_contents, params.position)
-    if path == ['include'] or os.path.basename(params.text_document.uri) == "top.sls" and len(path) == 2:
+    if (
+        path == ["include"]
+        or os.path.basename(params.text_document.uri) == "top.sls"
+        and len(path) == 2
+    ):
         file_path = urllib.parse.urlparse(params.text_document.uri).path
         includes = get_sls_includes(file_path)
         return CompletionList(
             is_incomplete=False,
-            items=[CompletionItem(label=f" {include}") for include in includes]
+            items=[
+                CompletionItem(label=f" {include}") for include in includes
+            ],
         )
 
     return CompletionList(
