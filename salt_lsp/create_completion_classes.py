@@ -29,6 +29,7 @@ if __name__ == "__main__":
                         "baredoc.list_states"
                     ),
                     capture_output=True,
+                    check=True,
                 ).stdout,
                 encoding="utf-8",
             )
