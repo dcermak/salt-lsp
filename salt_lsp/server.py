@@ -4,6 +4,7 @@ import os.path
 import subprocess
 import shlex
 from typing import Any, Dict, Union, Optional, List
+import urllib.parse
 
 from ruamel import yaml
 from pygls.server import LanguageServer
@@ -43,6 +44,7 @@ def get_top(path: str) -> Optional[str]:
 
 
 def get_root(path: str) -> str:
+    print(path)
     root = get_top(path)
     return root or get_git_root(path)
 
@@ -195,7 +197,14 @@ def completions(ls: SaltServer, params: CompletionParams):
         # FIXME: load the file
         return
 
-    print(construct_path_to_position(file_contents, params.position))
+    path = construct_path_to_position(file_contents, params.position)
+    if path == ['include']:
+        path = urllib.parse.urlparse(params.text_document.uri).path
+        includes = get_sls_includes(path)
+        return CompletionList(
+            is_incomplete=False,
+            items=[CompletionItem(label=f" {include}") for include in includes]
+        )
 
     return CompletionList(
         is_incomplete=False,
