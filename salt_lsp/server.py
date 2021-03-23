@@ -29,7 +29,9 @@ from pygls.lsp import types
 
 def get_git_root(path: str) -> str:
     return str(
-        subprocess.run(shlex.split("git rev-parse --show-toplevel")).stdout,
+        subprocess.run(
+            shlex.split("git rev-parse --show-toplevel"), capture_output=True
+        ).stdout,
         encoding="utf-8",
     )
 
