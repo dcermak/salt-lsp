@@ -4,7 +4,8 @@ import shlex
 import json
 import pickle
 import tempfile
-import os
+from os import mkdir
+from os.path import join, abspath, dirname
 from typing import Dict
 
 from base_types import StateNameCompletion
@@ -15,9 +16,9 @@ if __name__ == "__main__":
     state_completions: Dict[str, StateNameCompletion] = {}
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        salt_dest = os.path.join(tmpdirname, "salt")
-        minion_conf_file = os.path.join(salt_dest, "minion")
-        os.mkdir(salt_dest)
+        salt_dest = join(tmpdirname, "salt")
+        minion_conf_file = join(salt_dest, "minion")
+        mkdir(salt_dest)
         with open(minion_conf_file, "w") as minion_file:
             minion_file.write(f"root_dir: {tmpdirname}")
 
@@ -41,9 +42,7 @@ if __name__ == "__main__":
             )
 
     with open(
-        os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "states.pickle"
-        ),
+        join(dirname(abspath(__file__)), "data", "states.pickle"),
         "wb",
     ) as states_file:
         pickle.dump(state_completions, states_file)

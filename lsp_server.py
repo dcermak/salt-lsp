@@ -32,7 +32,7 @@ def main():
     args = parser.parse_args()
 
     with open(
-        join(dirname(abspath(__file__)), "states.pickle"), "rb"
+        join(dirname(abspath(__file__)), "data", "states.pickle"), "rb"
     ) as states_file:
         states = pickle.load(states_file)
     salt_server.post_init(states)
