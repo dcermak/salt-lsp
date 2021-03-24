@@ -4,7 +4,7 @@ Language Server Protocol implementation
 
 import os.path
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Tuple, Optional
 import urllib.parse
 
 from ruamel import yaml
@@ -49,7 +49,9 @@ class SaltServer(LanguageServer):
         self._state_name_completions = state_name_completions
         self._state_names = list(state_name_completions.keys())
 
-    def complete_state_name(self, params: types.CompletionParams) -> List[str]:
+    def complete_state_name(
+        self, params: types.CompletionParams
+    ) -> List[Tuple[str, Optional[str]]]:
         assert (
             params.context is not None
             and params.context.trigger_character == "."
@@ -135,8 +137,8 @@ def completions(
         return CompletionList(
             is_incomplete=False,
             items=[
-                CompletionItem(label=sub_name)
-                for sub_name in ls.complete_state_name(params)
+                CompletionItem(label=sub_name, documentation=docs)
+                for sub_name, docs in ls.complete_state_name(params)
             ],
         )
 

@@ -1,19 +1,54 @@
-from typing import Any, List
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
+
+
+@dataclass(frozen=True)
+class StateParameters:
+    parameters: Any
+    documentation: Optional[str]
 
 
 class StateNameCompletion:
-    def __init__(self, state_name: str, state_params: List[Any]) -> None:
+    """
+    This class provides the Salt Language Server with state name completion and
+    documentation about the state.
+    """
+
+    def __init__(
+        self,
+        state_name: str,
+        state_params: List[Any],
+        module_docs: Dict[str, str],
+    ) -> None:
         self.state_name = state_name
-        self.state_params = {}
+        self.state_params: Dict[str, StateParameters] = {}
 
         for submod in state_params:
             submod_name = next(iter(submod.keys()))
-            self.state_params[submod_name] = submod[submod_name]
+            docs = None
+            key = f"{state_name}.{submod_name}"
+            if key in module_docs:
+                docs = module_docs[key]
 
-        self.state_sub_names = list(self.state_params.keys())
+            self.state_params[submod_name] = StateParameters(
+                submod[submod_name], docs
+            )
 
-    def provide_subname_completion(self) -> List[str]:
-        return self.state_sub_names
+        self.state_sub_names: List[str] = list(self.state_params.keys())
+
+    def provide_subname_completion(self) -> List[Tuple[str, Optional[str]]]:
+        """
+        This function provides the names and docstrings of the submodules of
+        this state.
+        E.g. for the file state, it returns:
+        [("absent", "doc of absent"), ("accumulated", "doc of accumulated"), ]
+
+        The documentation is not guaranteed to be present and can be None.
+        """
+        return list(
+            (key, self.state_params[key].documentation)
+            for key in self.state_params
+        )
 
     def provide_param_completion(self, submod_name: str) -> List[str]:
-        return list(self.state_params[submod_name].keys())
+        return list(self.state_params[submod_name].parameters.keys())

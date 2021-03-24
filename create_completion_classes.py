@@ -22,23 +22,26 @@ if __name__ == "__main__":
         with open(minion_conf_file, "w") as minion_file:
             minion_file.write(f"root_dir: {tmpdirname}")
 
-        docs = json.loads(
-            str(
-                subprocess.run(
-                    shlex.split(
-                        f"salt-call --local -c {salt_dest} --out json "
-                        "baredoc.list_states"
-                    ),
-                    capture_output=True,
-                    check=True,
-                ).stdout,
-                encoding="utf-8",
+        mod_list, docs = (
+            json.loads(
+                str(
+                    subprocess.run(
+                        shlex.split(
+                            f"salt-call --local -c {salt_dest} --out json "
+                            f"baredoc.{mod_name}"
+                        ),
+                        capture_output=True,
+                        check=True,
+                    ).stdout,
+                    encoding="utf-8",
+                )
             )
+            for mod_name in ("list_states", "state_docs")
         )
 
-        for module in docs["local"]:
+        for module in mod_list["local"]:
             state_completions[module] = StateNameCompletion(
-                module, docs["local"][module]
+                module, mod_list["local"][module], docs["local"]
             )
 
     with open(
