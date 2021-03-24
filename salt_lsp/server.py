@@ -70,7 +70,13 @@ class SaltServer(LanguageServer):
             SaltServer.LINE_START_REGEX.finditer(contents, 0, ind)
         )
         if last_match is None:
-            # FIXME: log a warning/error
+            self.logger.debug(
+                "expected to find whitespace before the position (%d, %d) "
+                "but got no regex match for the document: %s",
+                params.position.line,
+                params.position.character,
+                contents,
+            )
             return []
         state_name = contents[last_match.span()[1] : ind - 1]
         if state_name in self._state_name_completions:
