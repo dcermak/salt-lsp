@@ -5,7 +5,6 @@ Language Server Protocol implementation
 import os.path
 import re
 from typing import Any, Dict, List, Tuple, Optional
-import urllib.parse
 import logging
 
 from ruamel import yaml
@@ -156,7 +155,7 @@ def completions(
         or os.path.basename(params.text_document.uri) == "top.sls"
         and len(path) == 2
     ):
-        file_path = urllib.parse.urlparse(params.text_document.uri).path
+        file_path = utils.FileUri(params.text_document.uri).path
         includes = utils.get_sls_includes(file_path)
         return CompletionList(
             is_incomplete=False,
