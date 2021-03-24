@@ -130,7 +130,7 @@ salt_server = SaltServer()
     COMPLETION, CompletionOptions(trigger_characters=["-", "."])
 )
 def completions(
-    ls: SaltServer, params: CompletionParams
+    salt_srv: SaltServer, params: CompletionParams
 ) -> Optional[CompletionList]:
     """Returns completion items."""
     if params.context is not None and params.context.trigger_character == ".":
@@ -138,7 +138,7 @@ def completions(
             is_incomplete=False,
             items=[
                 CompletionItem(label=sub_name, documentation=docs)
-                for sub_name, docs in ls.complete_state_name(params)
+                for sub_name, docs in salt_srv.complete_state_name(params)
             ],
         )
 
@@ -173,17 +173,21 @@ def completions(
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CHANGE)
-def on_did_change(ls: SaltServer, params: types.DidChangeTextDocumentParams):
-    ls.reconcile_file(params)
+def on_did_change(
+    salt_srv: SaltServer, params: types.DidChangeTextDocumentParams
+):
+    salt_srv.reconcile_file(params)
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_CLOSE)
-def did_close(ls: SaltServer, params: types.DidCloseTextDocumentParams):
+def did_close(salt_srv: SaltServer, params: types.DidCloseTextDocumentParams):
     """Text document did close notification."""
-    ls.remove_file(params)
+    salt_srv.remove_file(params)
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
-async def did_open(ls: SaltServer, params: types.DidOpenTextDocumentParams):
+async def did_open(
+    salt_srv: SaltServer, params: types.DidOpenTextDocumentParams
+):
     """Text document did open notification."""
-    ls.register_file(params)
+    salt_srv.register_file(params)
