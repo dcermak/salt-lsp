@@ -7,7 +7,7 @@ import os
 import os.path
 import subprocess
 import shlex
-from typing import Any, Union, Optional, List
+from typing import Any, Iterator, Union, Optional, List, TypeVar
 
 from pygls.lsp.types import (
     Position,
@@ -123,3 +123,19 @@ def construct_path_to_position(
 def position_to_index(text, line, column):
     split = text.splitlines(keepends=True)
     return sum([len(l) for i, l in enumerate(split) if i < line]) + column
+
+
+T = TypeVar("T")
+
+
+def get_last_element_of_iterator(iterator: Iterator[T]) -> Optional[T]:
+    """
+    Returns the last element of from an iterator or None if the iterator is
+    empty.
+    """
+    try:
+        *_, last = iterator
+        return last
+    except ValueError:
+        # empty iterator
+        return None
