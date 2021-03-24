@@ -40,10 +40,10 @@ class SaltServer(LanguageServer):
         super().__init__()
 
         self._files: Dict[str, Any] = {}
-        self._state_name_completions: Optional[
-            Dict[str, StateNameCompletion]
-        ] = None
+        self._state_name_completions: Dict[str, StateNameCompletion] = {}
+
         self.logger: logging.Logger = logging.getLogger()
+        self._state_names: List[str] = []
 
     def post_init(
         self,
@@ -62,9 +62,6 @@ class SaltServer(LanguageServer):
             params.context is not None
             and params.context.trigger_character == "."
         )
-        if self._state_name_completions is None:
-            # FIXME: log an error
-            return []
 
         contents = self._files[params.text_document.uri]
         ind = utils.position_to_index(
