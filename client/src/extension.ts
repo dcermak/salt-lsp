@@ -62,10 +62,8 @@ function startLangServerTCP(addr: number): LanguageClient {
       });
 
       clientSocket.on("close", () => {
-        console.log("Connection closed");
         setTimeout(() => {
           clientSocket.connect(addr, "127.0.0.1");
-          console.log("Connection re-established");
         }, 1000);
       });
     });
