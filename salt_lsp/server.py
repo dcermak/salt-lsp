@@ -50,7 +50,10 @@ class SaltServer(LanguageServer):
         self._state_names = list(state_name_completions.keys())
 
     def complete_state_name(self, params: types.CompletionParams) -> List[str]:
-        assert params.context.trigger_character == "."
+        assert (
+            params.context is not None
+            and params.context.trigger_character == "."
+        )
         if self._state_name_completions is None:
             # FIXME: log an error
             return []
@@ -59,12 +62,17 @@ class SaltServer(LanguageServer):
         ind = utils.position_to_index(
             contents, params.position.line, params.position.character
         )
-        print(SaltServer.LINE_START_REGEX.search(contents, 0, ind))
-        last_match = SaltServer.LINE_START_REGEX.search(contents[:ind])
-
+        last_match = utils.get_last_element_of_iterator(
+            SaltServer.LINE_START_REGEX.finditer(contents, 0, ind)
+        )
+        if last_match is None:
+            # FIXME: log a warning/error
+            return []
         state_name = contents[last_match.span()[1] : ind - 1]
-        completer = self._state_name_completions[state_name]
-        return completer.provide_subname_completion()
+        if state_name in self._state_name_completions:
+            completer = self._state_name_completions[state_name]
+            return completer.provide_subname_completion()
+        return []
 
     def remove_file(self, params: types.DidCloseTextDocumentParams) -> None:
         del self._files[params.text_document.uri]
@@ -105,7 +113,10 @@ class SaltServer(LanguageServer):
                 content = self._files[uri]
                 return yaml.load(content, Loader=yaml.RoundTripLoader)
             except Exception as err:
-                self.show_message("Failed parsing YAML: " + str(err), msg_type=types.MessageType.Error)
+                self.show_message(
+                    "Failed parsing YAML: " + str(err),
+                    msg_type=types.MessageType.Error,
+                )
                 return None
         return None
 
@@ -116,15 +127,23 @@ salt_server = SaltServer()
 @salt_server.feature(
     COMPLETION, CompletionOptions(trigger_characters=["-", "."])
 )
-def completions(ls: SaltServer, params: CompletionParams):
+def completions(
+    ls: SaltServer, params: CompletionParams
+) -> Optional[CompletionList]:
     """Returns completion items."""
+    if params.context is not None and params.context.trigger_character == ".":
+        return CompletionList(
+            is_incomplete=False,
+            items=[
+                CompletionItem(label=sub_name)
+                for sub_name in ls.complete_state_name(params)
+            ],
+        )
+
     file_contents = ls.get_file_contents(params.text_document.uri)
     if file_contents is None:
         # FIXME: load the file
-        return
-
-    if params.context.trigger_character == ".":
-        return ls.complete_state_name(params)
+        return None
 
     path = utils.construct_path_to_position(file_contents, params.position)
     if (

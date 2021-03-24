@@ -3,8 +3,19 @@ from salt_lsp.server import salt_server
 from salt_lsp.base_types import StateNameCompletion
 
 
-TEST_FILE = """/etc/systemd/system/foo.service:
+TEST_FILE = """saltmaster.packages:
+  pkg.installed:
+    - pkgs:
+      - salt-master
+
+/srv/git/salt-states:
   file.:
+    - target: /srv/salt
+
+git -C /srv/salt pull -q:
+  cron.:
+    - user: root
+    - minute: '*/5'
 """
 
 FILE_NAME_COMPLETER = {
@@ -429,7 +440,7 @@ class TestStateNameCompletion:
             SimpleNamespace(
                 **{
                     **txt_doc,
-                    "position": SimpleNamespace(line=1, character=7),
+                    "position": SimpleNamespace(line=6, character=7),
                     "context": SimpleNamespace(trigger_character="."),
                 }
             )
