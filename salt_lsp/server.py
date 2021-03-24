@@ -312,15 +312,6 @@ def completions(
             ],
         )
 
-    return CompletionList(
-        is_incomplete=False,
-        items=[
-            CompletionItem(label="Item1", kind=CompletionItemKind.Text),
-            CompletionItem(label="Item2"),
-            CompletionItem(label="Item3"),
-        ],
-    )
-
 
 @salt_server.feature(DEFINITION)
 def goto_definition(
