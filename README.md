@@ -11,6 +11,16 @@ Setup & start the server:
 $ python3 -m venv .env3
 $ . .env3/bin/activate
 $ pip install -r requirements.txt
+
+Create the completion classes once:
+
+```ShellSession
+$ ./create_completion_classes.py
+```
+
+Start the server:
+
+```ShellSession
 $ ./lsp_server.py --tcp
 ```
 
