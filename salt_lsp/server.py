@@ -104,7 +104,8 @@ class SaltServer(LanguageServer):
             try:
                 content = self._files[uri]
                 return yaml.load(content, Loader=yaml.RoundTripLoader)
-            except Exception:
+            except Exception as err:
+                self.show_message("Failed parsing YAML: " + str(err), msg_type=types.MessageType.Error)
                 return None
         return None
 
