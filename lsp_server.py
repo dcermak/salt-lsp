@@ -24,6 +24,12 @@ def add_arguments(parser):
     parser.add_argument(
         "--port", type=int, default=2087, help="Bind to this port"
     )
+    parser.add_argument(
+        "--stop-after-init",
+        action="store_true",
+        help="initialize the server, but don't launch it "
+        "(useful for debugging/testing purposes)",
+    )
 
 
 def main():
@@ -36,6 +42,9 @@ def main():
     ) as states_file:
         states = pickle.load(states_file)
     salt_server.post_init(states)
+
+    if args.stop_after_init:
+        return
 
     if args.tcp:
         salt_server.start_tcp(args.host, args.port)

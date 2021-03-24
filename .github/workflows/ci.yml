@@ -27,6 +27,13 @@ jobs:
           . .env3/bin/activate
           python -m pytest
 
+      - name: generate the cached completion data and try to launch the server
+        run: |
+          . .env3/bin/activate
+          pip install salt
+          ./create_completion_classes.py
+          ./lsp_server.py --stop-after-init
+
   lint:
     name: lint and format
     runs-on: ubuntu-latest
