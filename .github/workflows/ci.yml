@@ -49,9 +49,9 @@ jobs:
       - name: run mypy
         run: |
           . .env3/bin/activate
-          python -m mypy salt_lsp/*py
+          python -m mypy salt_lsp/*py *py
 
       - name: run pylint
         run: |
           . .env3/bin/activate
-          python -m pylint --fail-under 8.2 salt_lsp/*py
+          python -m pylint --fail-under 8.2 salt_lsp/*py *py
