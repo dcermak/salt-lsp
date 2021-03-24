@@ -25,7 +25,7 @@ jobs:
       - name: run the tests
         run: |
           . .env3/bin/activate
-          python -m pytest
+          python -m pytest -vv
 
       - name: generate the cached completion data and try to launch the server
         run: |
