@@ -1,7 +1,6 @@
 /* -------------------------------------------------------------------------
  * Original work Copyright (c) Microsoft Corporation. All rights reserved.
  * Original work licensed under the MIT License.
- * See ThirdPartyNotices.txt in the project root for license information.
  * All modifications Copyright (c) Open Law Library. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License")
@@ -30,16 +29,12 @@ let client: LanguageClient;
 
 function getClientOptions(): LanguageClientOptions {
   return {
-    // Register the server for plain text documents
+    // Register the server for sls files
     documentSelector: [
       { scheme: "file", language: "sls" },
       { scheme: "untitled", language: "sls" },
     ],
-    outputChannelName: "[pygls] SaltStateLanguageServer",
-    synchronize: {
-      // Notify the server about file changes to '.clientrc files contain in the workspace
-      fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
-    },
+    outputChannelName: "[salt_lsp] SaltStateLanguageServer",
   };
 }
 
