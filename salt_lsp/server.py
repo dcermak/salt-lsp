@@ -188,8 +188,6 @@ def did_close(salt_srv: SaltServer, params: types.DidCloseTextDocumentParams):
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
-async def did_open(
-    salt_srv: SaltServer, params: types.DidOpenTextDocumentParams
-):
+def did_open(salt_srv: SaltServer, params: types.DidOpenTextDocumentParams):
     """Text document did open notification."""
     salt_srv.register_file(params)
