@@ -1,5 +1,7 @@
 # salt-lsp
 
+[![Continous Integration](https://github.com/dcermak/salt-lsp/actions/workflows/ci.yml/badge.svg)](https://github.com/dcermak/salt-lsp/actions/workflows/ci.yml)
+
 Salt Language Server Protocol Server
 
 
