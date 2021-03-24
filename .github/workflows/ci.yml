@@ -1,0 +1,57 @@
+---
+name: Continous integration of Salt LSP
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.6', '3.7', '3.8', '3.9']
+    name: run tests for python ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: setup virtualenv & install dependencies
+        run: |
+          python3 -m venv .env3
+          . .env3/bin/activate
+          pip install -r requirements.txt
+
+      - name: run the tests
+        run: |
+          . .env3/bin/activate
+          python -m pytest
+
+  lint:
+    name: lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+
+      - name: setup virtualenv & install dependencies
+        run: |
+          python3 -m venv .env3
+          . .env3/bin/activate
+          pip install -r requirements.txt
+          pip install mypy pylint black
+
+      - name: run black
+        run: |
+          . .env3/bin/activate
+          python -m black --check --diff -l 79 salt_lsp/*py tests/*py *py
+
+      - name: run mypy
+        run: |
+          . .env3/bin/activate
+          python -m mypy salt_lsp/*py
+
+      - name: run pylint
+        run: |
+          . .env3/bin/activate
+          python -m pylint --fail-under 8.2 salt_lsp/*py
