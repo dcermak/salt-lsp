@@ -6,6 +6,7 @@ import os.path
 import re
 from typing import Any, Dict, List, Tuple, Optional
 import urllib.parse
+import logging
 
 from ruamel import yaml
 from pygls.server import LanguageServer
@@ -42,12 +43,17 @@ class SaltServer(LanguageServer):
         self._state_name_completions: Optional[
             Dict[str, StateNameCompletion]
         ] = None
+        self.logger: logging.Logger = logging.getLogger()
 
     def post_init(
-        self, state_name_completions: Dict[str, StateNameCompletion]
+        self,
+        state_name_completions: Dict[str, StateNameCompletion],
+        log_level=logging.DEBUG,
     ) -> None:
         self._state_name_completions = state_name_completions
         self._state_names = list(state_name_completions.keys())
+        self.logger = logging.getLogger("SaltServer")
+        self.logger.setLevel(log_level)
 
     def complete_state_name(
         self, params: types.CompletionParams
