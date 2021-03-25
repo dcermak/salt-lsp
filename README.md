@@ -5,6 +5,12 @@
 Salt Language Server Protocol Server
 
 
+## Prerequisites
+
+- Python >= 3.7
+- VSCode (required for live testing the server from an editor)
+
+
 ## Setup
 
 Setup & start the server:
