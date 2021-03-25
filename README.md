@@ -18,7 +18,7 @@ Setup & start the server:
 ```ShellSession
 $ python3 -m venv .env3
 $ . .env3/bin/activate
-$ pip install -r requirements.txt
+$ pip install -r requirements.txt -r dev-requirements.txt
 ```
 
 Create the completion classes once:

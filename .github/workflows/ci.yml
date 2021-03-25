@@ -20,7 +20,7 @@ jobs:
         run: |
           python3 -m venv .env3
           . .env3/bin/activate
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r dev-requirements.txt
 
       - name: run the tests
         run: |
@@ -30,7 +30,6 @@ jobs:
       - name: generate the cached completion data and try to launch the server
         run: |
           . .env3/bin/activate
-          pip install salt
           ./create_completion_classes.py
           ./lsp_server.py --stop-after-init
 
@@ -45,8 +44,7 @@ jobs:
         run: |
           python3 -m venv .env3
           . .env3/bin/activate
-          pip install -r requirements.txt
-          pip install mypy pylint black
+          pip install -r requirements.txt -r dev-requirements.txt
 
       - name: run black
         run: |
