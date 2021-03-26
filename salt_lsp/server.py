@@ -311,6 +311,7 @@ def completions(
                 CompletionItem(label=f" {include}") for include in includes
             ],
         )
+    return None
 
 
 @salt_server.feature(DEFINITION)

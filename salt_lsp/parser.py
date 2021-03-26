@@ -236,9 +236,9 @@ class Tree(AstMapNode):
 
 @dataclass(init=False, eq=False)
 class TokenNode(AstNode):
-    token: yaml.Token
+    token: yaml.Token = field(default_factory=lambda: yaml.Token(0, 0))
 
-    def __init__(self: TokenNode, token: yaml.Token):
+    def __init__(self: TokenNode, token: yaml.Token) -> None:
         super().__init__(
             start=Position(
                 line=token.start_mark.line, col=token.start_mark.column
