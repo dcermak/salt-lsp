@@ -263,14 +263,22 @@ def parse(document: str) -> Tree:
     breadcrumbs = []
     next_scalar_as_key = False
     unprocessed_tokens = None
+    last_start = None
 
     tokens = yaml.scan(document)
     try:
         for token in tokens:
+            if isinstance(token, yaml.StreamStartToken):
+                tree.start = Position(line=token.start_mark.line, col=token.start_mark.column)
+            if isinstance(token, yaml.StreamEndToken):
+                tree.end = Position(line=token.end_mark.line, col=token.end_mark.column)
+
             if isinstance(token, yaml.BlockMappingStartToken):
                 if not breadcrumbs:
                     # Top level mapping block
                     breadcrumbs.append(tree)
+                if not last_start:
+                    last_start = Position(line=token.start_mark.line, col=token.start_mark.column)
 
             if isinstance(token, yaml.ValueToken) and isinstance(
                 breadcrumbs[-1], StateParameterNode
@@ -297,6 +305,8 @@ def parse(document: str) -> Tree:
 
             if isinstance(token, yaml.BlockEndToken):
                 last = breadcrumbs.pop()
+                if not isinstance(last, TokenNode):
+                    last.end = Position(line=token.end_mark.line, col=token.end_mark.column)
                 if isinstance(last, StateParameterNode):
                     if (
                         len(unprocessed_tokens) == 1
@@ -315,16 +325,23 @@ def parse(document: str) -> Tree:
                 next_scalar_as_key = True
 
             if isinstance(token, yaml.BlockEntryToken):
-                # TODO Store the token for the parameter start position
+                # Store the token for the parameter and requisite start position since those are dicts in lists
+                if isinstance(breadcrumbs[-1], (StateCallNode, RequisitesNode)):
+                    last_start = Position(line=token.start_mark.line, col=token.start_mark.column)
                 if isinstance(breadcrumbs[-1], IncludesNode):
                     breadcrumbs.append(breadcrumbs[-1].add())
+                    breadcrumbs[-1].start = Position(line=token.start_mark.line, col=token.start_mark.column)
 
             if isinstance(token, yaml.ScalarToken):
                 if next_scalar_as_key:
                     breadcrumbs.append(breadcrumbs[-1].add_key(token.value))
+                    breadcrumbs[-1].start = last_start
+                    last_start = None
                     next_scalar_as_key = False
                 if isinstance(breadcrumbs[-1], IncludeNode):
-                    breadcrumbs.pop().value = token.value
+                    include = breadcrumbs.pop()
+                    include.value = token.value
+                    include.end = Position(line=token.end_mark.line, col=token.end_mark.column)
                 if isinstance(breadcrumbs[-1], RequisiteNode):
                     breadcrumbs[-1].reference = token.value
     except yaml.scanner.ScannerError:
