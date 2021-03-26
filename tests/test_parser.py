@@ -54,12 +54,10 @@ rootco-salt-backup.timer:
 """
 
 
-class TestPathToPosition:
-    def test_path_after_first_line(self):
-        assert construct_path_to_position(
-            MASTER_DOT_SLS, Position(line=1, character=2)
-        ) == ["saltmaster.packages"]
+SLS_PARSED = yaml.load(MASTER_DOT_SLS, Loader=yaml.RoundTripLoader)
 
+
+class TestPathToPosition:
     def test_path_to_pkgs_list(self):
         expected_res = [
             "saltmaster.packages",
@@ -70,14 +68,14 @@ class TestPathToPosition:
         for line in (3, 4, 5):
             assert (
                 construct_path_to_position(
-                    MASTER_DOT_SLS, Position(line=line, character=7)
+                    SLS_PARSED, Position(line=line, character=7)
                 )
                 == expected_res
             )
 
     def test_path_to_require(self):
         assert construct_path_to_position(
-            MASTER_DOT_SLS, Position(line=8, character=7)
+            SLS_PARSED, Position(line=8, character=7)
         ) == [
             "saltmaster.packages",
             "pkg.installed",
@@ -87,7 +85,7 @@ class TestPathToPosition:
 
     def test_path_to_dummy(self):
         assert construct_path_to_position(
-            MASTER_DOT_SLS, Position(line=14, character=7)
+            SLS_PARSED, Position(line=14, character=7)
         ) == [
             "git -C /srv/salt pull -q",
             "cron.present",
@@ -97,7 +95,7 @@ class TestPathToPosition:
 
     def test_path_after_dummy(self):
         assert construct_path_to_position(
-            MASTER_DOT_SLS, Position(line=15, character=5)
+            SLS_PARSED, Position(line=15, character=5)
         ) == [
             "git -C /srv/salt pull -q",
             "cron.present",
@@ -105,17 +103,10 @@ class TestPathToPosition:
 
     def test_path_before_target(self):
         assert construct_path_to_position(
-            MASTER_DOT_SLS,
+            SLS_PARSED,
             # before "target: /srv/salt"
             Position(line=19, character=5),
         ) == [
             "/srv/git/salt-states",
             "file.symlink",
-        ]
-
-    def test_path_after_blank_level(self):
-        sls_start = MASTER_DOT_SLS[: position_to_index(MASTER_DOT_SLS, 8, 2)]
-        pos = Position(line=8, character=2)  # After the last character
-        assert construct_path_to_position(sls_start, pos) == [
-            "saltmaster.packages"
         ]
