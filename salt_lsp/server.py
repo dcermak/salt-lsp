@@ -2,7 +2,7 @@
 Language Server Protocol implementation
 """
 
-from os.path import basename, join, exists, dirname
+from os.path import basename, join, exists
 from typing import Any, Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 import re
@@ -21,7 +21,6 @@ from pygls.lsp.methods import (
 )
 from pygls.lsp.types import (
     CompletionItem,
-    CompletionItemKind,
     CompletionList,
     CompletionParams,
     CompletionOptions,

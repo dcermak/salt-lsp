@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import yaml
 from os.path import abspath, dirname, exists, join
-from typing import Any, List, Mapping, Optional
+from typing import Any, List, Optional
 
 
 @dataclass
