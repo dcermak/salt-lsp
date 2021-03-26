@@ -70,6 +70,7 @@ class RequisiteNode(AstNode):
     """
     Node reprensenting one requisite
     """
+
     module: str = None
     reference: str = None
 
@@ -79,7 +80,19 @@ class RequisitesNode(AstNode):
     """
     Node Representing the list of requisites of a state
     """
+    kind: str = None
     requisites: List(RequisiteNode) = field(default_factory=list)
+
+
+    def add_key(self: StateCallNode, key: str) -> None:
+        """
+        Add a key token to the tree, the value will come later
+
+        :return: the added node
+        """
+        self.requisites.append(RequisiteNode(module=key))
+        return self.requisites[-1]
+
 
 @dataclass
 class StateCallNode(AstNode):
@@ -105,7 +118,7 @@ class StateCallNode(AstNode):
 
     name: str = None
     parameters: List[StateParameterNode] = field(default_factory=list)
-    requisites: Mapping[str, RequisitesNode] = field(default_factory=dict)
+    requisites: List[RequisitesNode] = field(default_factory=list)
 
     def add_key(self: StateCallNode, key: str) -> None:
         """
@@ -113,7 +126,24 @@ class StateCallNode(AstNode):
 
         :return: the added node
         """
-        # TODO Handle require, onchanges, watch, listen, prereq, onfail, use and their _in and _any sibblings
+        requisites_keys = [
+            "require",
+            "onchanges",
+            "watch",
+            "listen",
+            "prereq",
+            "onfail",
+            "use",
+        ]
+        all_requisites_keys = (
+            requisites_keys
+            + [k + "_any" for k in requisites_keys]
+            + [k + "_in" for k in requisites_keys]
+        )
+        if key in all_requisites_keys:
+            self.requisites.append(RequisitesNode(kind=key))
+            return self.requisites[-1]
+        
         self.parameters.append(StateParameterNode(name=key))
         return self.parameters[-1]
 
@@ -206,10 +236,7 @@ class TokenNode(AstNode):
             return False
 
         scalar_equal = self.is_scalar() and self.token.value == other.token.value
-        return (
-            super().__eq__(other)
-            and (scalar_equal or not self.is_scalar())
-        )
+        return super().__eq__(other) and (scalar_equal or not self.is_scalar())
 
     def is_scalar(self):
         """
@@ -261,7 +288,10 @@ def parse(document: str) -> Tree:
             if isinstance(token, yaml.BlockEndToken):
                 last = breadcrumbs.pop()
                 if isinstance(last, StateParameterNode):
-                    if len(unprocessed_tokens) == 1 and unprocessed_tokens[0].is_scalar():
+                    if (
+                        len(unprocessed_tokens) == 1
+                        and unprocessed_tokens[0].is_scalar()
+                    ):
                         last.value = unprocessed_tokens[0].token.value
                     else:
                         last.value = unprocessed_tokens
@@ -285,6 +315,8 @@ def parse(document: str) -> Tree:
                     next_scalar_as_key = False
                 if isinstance(breadcrumbs[-1], IncludeNode):
                     breadcrumbs.pop().value = token.value
+                if isinstance(breadcrumbs[-1], RequisiteNode):
+                    breadcrumbs[-1].reference = token.value
     except yaml.scanner.ScannerError:
         # TODO We may want to check if the error occurs at the searched position
         return []
