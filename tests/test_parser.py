@@ -56,7 +56,9 @@ rootco-salt-backup.timer:
 
 class TestPathToPosition:
     def test_path_after_first_line(self):
-        assert (construct_path_to_position(MASTER_DOT_SLS, Position(line=1, character=2))) == ["saltmaster.packages"]
+        assert construct_path_to_position(
+            MASTER_DOT_SLS, Position(line=1, character=2)
+        ) == ["saltmaster.packages"]
 
     def test_path_to_pkgs_list(self):
         expected_res = [
@@ -112,11 +114,8 @@ class TestPathToPosition:
         ]
 
     def test_path_after_blank_level(self):
-        sls_start = MASTER_DOT_SLS[:position_to_index(MASTER_DOT_SLS, 8, 2)]
-        assert construct_path_to_position(
-            sls_start,
-            # After the last character
-            Position(line=8, character=2)
-        ) == [
+        sls_start = MASTER_DOT_SLS[: position_to_index(MASTER_DOT_SLS, 8, 2)]
+        pos = Position(line=8, character=2)  # After the last character
+        assert construct_path_to_position(sls_start, pos) == [
             "saltmaster.packages"
         ]

@@ -80,9 +80,9 @@ class RequisitesNode(AstNode):
     """
     Node Representing the list of requisites of a state
     """
+
     kind: str = None
     requisites: List(RequisiteNode) = field(default_factory=list)
-
 
     def add_key(self: StateCallNode, key: str) -> None:
         """
@@ -143,7 +143,7 @@ class StateCallNode(AstNode):
         if key in all_requisites_keys:
             self.requisites.append(RequisitesNode(kind=key))
             return self.requisites[-1]
-        
+
         self.parameters.append(StateParameterNode(name=key))
         return self.parameters[-1]
 
@@ -226,16 +226,22 @@ class TokenNode(AstNode):
 
     def __init__(self: TokenNode, token: yaml.Token = None):
         super().__init__(
-            start=Position(line=token.start_mark.line, col=token.start_mark.column),
+            start=Position(
+                line=token.start_mark.line, col=token.start_mark.column
+            ),
             end=Position(line=token.end_mark.line, col=token.end_mark.column),
         )
         self.token = token
 
     def __eq__(self, other):
-        if not isinstance(other, TokenNode) or type(self.token) != type(other.token):
+        if not isinstance(other, TokenNode) or type(self.token) != type(
+            other.token
+        ):
             return False
 
-        scalar_equal = self.is_scalar() and self.token.value == other.token.value
+        scalar_equal = (
+            self.is_scalar() and self.token.value == other.token.value
+        )
         return super().__eq__(other) and (scalar_equal or not self.is_scalar())
 
     def is_scalar(self):
@@ -281,7 +287,11 @@ def parse(document: str) -> Tree:
                 ) or not isinstance(token, yaml.BlockEndToken):
                     unprocessed_tokens.append(TokenNode(token=token))
                 if isinstance(
-                    token, (yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken)
+                    token,
+                    (
+                        yaml.BlockMappingStartToken,
+                        yaml.BlockSequenceStartToken,
+                    ),
                 ):
                     breadcrumbs.append(unprocessed_tokens[-1])
 
