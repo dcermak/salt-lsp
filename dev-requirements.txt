@@ -4,3 +4,4 @@ pylint
 pytest
 salt
 pyfakefs
+pytest-cov
