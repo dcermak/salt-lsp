@@ -258,6 +258,145 @@ class TokenNode(AstNode):
         return super().__eq__(other) and (scalar_equal or not is_scalar)
 
 
+class Parser:
+    """
+    SLS file parser class
+    """
+
+    def __init__(self: Parser, document: str) -> None:
+        """
+        Create a parser object for an SLS file.
+
+        :param document: the content of the SLS file to parse
+        """
+        self.document = document
+        self._tree = Tree()
+        self._breadcrumbs: List[AstNode] = []
+        self._next_scalar_as_key = False
+        self._unprocessed_tokens: Optional[List[TokenNode]] = None
+        self._last_start: Optional[Position] = None
+
+    def _process_token(self: Parser, token: yaml.Token) -> None:
+        """
+        Process one token
+        """
+        if isinstance(token, yaml.StreamStartToken):
+            self._tree.start = Position(
+                line=token.start_mark.line, col=token.start_mark.column
+            )
+        if isinstance(token, yaml.StreamEndToken):
+            self._tree.end = Position(
+                line=token.end_mark.line, col=token.end_mark.column
+            )
+
+        if isinstance(token, yaml.BlockMappingStartToken):
+            if not self._breadcrumbs:
+                # Top level mapping block
+                self._breadcrumbs.append(self._tree)
+            if not self._last_start:
+                self._last_start = Position(
+                    line=token.start_mark.line, col=token.start_mark.column
+                )
+
+        if isinstance(token, yaml.ValueToken) and isinstance(
+            self._breadcrumbs[-1], StateParameterNode
+        ):
+            if not self._unprocessed_tokens:
+                self._unprocessed_tokens = []
+                # We don't need to do anything else with this token,
+                # just flag the next tokens to be simply collected
+                return
+
+        if self._unprocessed_tokens is not None:
+            if not isinstance(
+                self._breadcrumbs[-1], StateParameterNode
+            ) or not isinstance(token, yaml.BlockEndToken):
+                self._unprocessed_tokens.append(TokenNode(token=token))
+            if isinstance(
+                token,
+                (
+                    yaml.BlockMappingStartToken,
+                    yaml.BlockSequenceStartToken,
+                ),
+            ):
+                self._breadcrumbs.append(self._unprocessed_tokens[-1])
+
+        if isinstance(token, yaml.BlockEndToken):
+            last = self._breadcrumbs.pop()
+            if not isinstance(last, TokenNode):
+                last.end = Position(
+                    line=token.end_mark.line, col=token.end_mark.column
+                )
+            if (
+                isinstance(last, StateParameterNode)
+                and self._unprocessed_tokens is not None
+            ):
+                if len(self._unprocessed_tokens) == 1 and isinstance(
+                    self._unprocessed_tokens[0].token, yaml.ScalarToken
+                ):
+                    last.value = self._unprocessed_tokens[0].token.value
+                else:
+                    last.value = self._unprocessed_tokens
+                self._unprocessed_tokens = None
+
+        if self._unprocessed_tokens is not None:
+            # If self._unprocessed_tokens is set then we don't have Salt-specific data token to process
+            return
+
+        if isinstance(token, yaml.KeyToken):
+            self._next_scalar_as_key = True
+
+        if isinstance(token, yaml.BlockEntryToken):
+            # Store the token for the parameter and requisite start position since those are dicts in lists
+            if isinstance(
+                self._breadcrumbs[-1], (StateCallNode, RequisitesNode)
+            ):
+                self._last_start = Position(
+                    line=token.start_mark.line, col=token.start_mark.column
+                )
+            if isinstance(self._breadcrumbs[-1], IncludesNode):
+                self._breadcrumbs.append(self._breadcrumbs[-1].add())
+                self._breadcrumbs[-1].start = Position(
+                    line=token.start_mark.line, col=token.start_mark.column
+                )
+
+        if isinstance(token, yaml.ScalarToken):
+            if self._next_scalar_as_key and isinstance(
+                self._breadcrumbs[-1], AstMapNode
+            ):
+                self._breadcrumbs.append(
+                    self._breadcrumbs[-1].add_key(token.value)
+                )
+                self._breadcrumbs[-1].start = self._last_start
+                self._last_start = None
+                self._next_scalar_as_key = False
+            if isinstance(self._breadcrumbs[-1], IncludeNode):
+                self._breadcrumbs[-1].value = token.value
+                self._breadcrumbs[-1].end = Position(
+                    line=token.end_mark.line, col=token.end_mark.column
+                )
+                self._breadcrumbs.pop()
+            if isinstance(self._breadcrumbs[-1], RequisiteNode):
+                self._breadcrumbs[-1].reference = token.value
+
+    def parse(self) -> Tree:
+        """
+        Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS file.
+
+        :return: the generated AST
+        :raises ValueException: for any other renderer but ``jinja|yaml``
+        """
+
+        tokens = yaml.scan(self.document)
+        try:
+            for token in tokens:
+                self._process_token(token)
+        except yaml.scanner.ScannerError:
+            # TODO We may want to check if the error occurs at the searched position
+            return self._tree
+        return self._tree
+
+
 def parse(document: str) -> Tree:
     """
     Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS file.
@@ -266,112 +405,4 @@ def parse(document: str) -> Tree:
     :return: the generated AST
     :raises ValueException: for any other renderer but ``jinja|yaml``
     """
-    tree = Tree()
-    breadcrumbs: List[AstNode] = []
-    next_scalar_as_key = False
-    unprocessed_tokens: Optional[List[TokenNode]] = None
-    last_start = None
-
-    tokens = yaml.scan(document)
-    try:
-        for token in tokens:
-            if isinstance(token, yaml.StreamStartToken):
-                tree.start = Position(
-                    line=token.start_mark.line, col=token.start_mark.column
-                )
-            if isinstance(token, yaml.StreamEndToken):
-                tree.end = Position(
-                    line=token.end_mark.line, col=token.end_mark.column
-                )
-
-            if isinstance(token, yaml.BlockMappingStartToken):
-                if not breadcrumbs:
-                    # Top level mapping block
-                    breadcrumbs.append(tree)
-                if not last_start:
-                    last_start = Position(
-                        line=token.start_mark.line, col=token.start_mark.column
-                    )
-
-            if isinstance(token, yaml.ValueToken) and isinstance(
-                breadcrumbs[-1], StateParameterNode
-            ):
-                if not unprocessed_tokens:
-                    unprocessed_tokens = []
-                    # We don't need to do anything else with this token,
-                    # just flag the next tokens to be simply collected
-                    continue
-
-            if unprocessed_tokens is not None:
-                if not isinstance(
-                    breadcrumbs[-1], StateParameterNode
-                ) or not isinstance(token, yaml.BlockEndToken):
-                    unprocessed_tokens.append(TokenNode(token=token))
-                if isinstance(
-                    token,
-                    (
-                        yaml.BlockMappingStartToken,
-                        yaml.BlockSequenceStartToken,
-                    ),
-                ):
-                    breadcrumbs.append(unprocessed_tokens[-1])
-
-            if isinstance(token, yaml.BlockEndToken):
-                last = breadcrumbs.pop()
-                if not isinstance(last, TokenNode):
-                    last.end = Position(
-                        line=token.end_mark.line, col=token.end_mark.column
-                    )
-                if (
-                    isinstance(last, StateParameterNode)
-                    and unprocessed_tokens is not None
-                ):
-                    if len(unprocessed_tokens) == 1 and isinstance(
-                        unprocessed_tokens[0].token, yaml.ScalarToken
-                    ):
-                        last.value = unprocessed_tokens[0].token.value
-                    else:
-                        last.value = unprocessed_tokens
-                    unprocessed_tokens = None
-
-            if unprocessed_tokens is not None:
-                # If unprocessed_tokens is set then we don't have Salt-specific data token to process
-                continue
-
-            if isinstance(token, yaml.KeyToken):
-                next_scalar_as_key = True
-
-            if isinstance(token, yaml.BlockEntryToken):
-                # Store the token for the parameter and requisite start position since those are dicts in lists
-                if isinstance(
-                    breadcrumbs[-1], (StateCallNode, RequisitesNode)
-                ):
-                    last_start = Position(
-                        line=token.start_mark.line, col=token.start_mark.column
-                    )
-                if isinstance(breadcrumbs[-1], IncludesNode):
-                    breadcrumbs.append(breadcrumbs[-1].add())
-                    breadcrumbs[-1].start = Position(
-                        line=token.start_mark.line, col=token.start_mark.column
-                    )
-
-            if isinstance(token, yaml.ScalarToken):
-                if next_scalar_as_key and isinstance(
-                    breadcrumbs[-1], AstMapNode
-                ):
-                    breadcrumbs.append(breadcrumbs[-1].add_key(token.value))
-                    breadcrumbs[-1].start = last_start
-                    last_start = None
-                    next_scalar_as_key = False
-                if isinstance(breadcrumbs[-1], IncludeNode):
-                    breadcrumbs[-1].value = token.value
-                    breadcrumbs[-1].end = Position(
-                        line=token.end_mark.line, col=token.end_mark.column
-                    )
-                    breadcrumbs.pop()
-                if isinstance(breadcrumbs[-1], RequisiteNode):
-                    breadcrumbs[-1].reference = token.value
-    except yaml.scanner.ScannerError:
-        # TODO We may want to check if the error occurs at the searched position
-        return tree
-    return tree
+    return Parser(document).parse()
