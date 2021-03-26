@@ -16,10 +16,18 @@ def test_includes():
             start=Position(line=0, col=0),
             end=Position(line=3, col=0),
             includes=[
-                IncludeNode(start=Position(line=1, col=2), end=Position(line=1, col=11), value="foo.bar"),
-                IncludeNode(start=Position(line=2, col=2), end=Position(line=2, col=7), value="web"),
-            ]
-        )
+                IncludeNode(
+                    start=Position(line=1, col=2),
+                    end=Position(line=1, col=11),
+                    value="foo.bar",
+                ),
+                IncludeNode(
+                    start=Position(line=2, col=2),
+                    end=Position(line=2, col=7),
+                    value="web",
+                ),
+            ],
+        ),
     )
 
 
@@ -47,16 +55,20 @@ def test_simple_state():
                             StateParameterNode(
                                 start=Position(line=2, col=4),
                                 end=Position(line=3, col=4),
-                                name="user", value="root"),
+                                name="user",
+                                value="root",
+                            ),
                             StateParameterNode(
                                 start=Position(line=3, col=4),
                                 end=Position(line=4, col=0),
-                                name="group", value="root"),
+                                name="group",
+                                value="root",
+                            ),
                         ],
                     )
                 ],
             )
-        ]
+        ],
     )
 
 
@@ -88,17 +100,21 @@ def test_extend():
                                 StateParameterNode(
                                     start=Position(line=3, col=6),
                                     end=Position(line=4, col=6),
-                                    name="user", value="root"),
+                                    name="user",
+                                    value="root",
+                                ),
                                 StateParameterNode(
                                     start=Position(line=4, col=6),
                                     end=Position(line=5, col=0),
-                                    name="group", value="root"),
+                                    name="group",
+                                    value="root",
+                                ),
                             ],
                         )
                     ],
                 )
-            ]
-        )
+            ],
+        ),
     )
 
 
@@ -129,11 +145,15 @@ def test_requisites():
                             StateParameterNode(
                                 start=Position(line=2, col=4),
                                 end=Position(line=3, col=4),
-                                name="user", value="root"),
+                                name="user",
+                                value="root",
+                            ),
                             StateParameterNode(
                                 start=Position(line=3, col=4),
                                 end=Position(line=4, col=4),
-                                name="group", value="root"),
+                                name="group",
+                                value="root",
+                            ),
                         ],
                         requisites=[
                             RequisitesNode(
@@ -144,18 +164,22 @@ def test_requisites():
                                     RequisiteNode(
                                         start=Position(line=5, col=6),
                                         end=Position(line=6, col=6),
-                                        module="file", reference="/foo/bar"),
+                                        module="file",
+                                        reference="/foo/bar",
+                                    ),
                                     RequisiteNode(
                                         start=Position(line=6, col=6),
                                         end=Position(line=7, col=0),
-                                        module="service", reference="libvirtd"),
+                                        module="service",
+                                        reference="libvirtd",
+                                    ),
                                 ],
                             )
                         ],
                     )
                 ],
             )
-        ]
+        ],
     )
 
 
@@ -201,17 +225,26 @@ def test_complex_parameter_state():
                                     TokenNode(
                                         yaml.BlockEntryToken(
                                             start_mark=create_mark(
-                                                line=3, col=6, content=content, index=56
+                                                line=3,
+                                                col=6,
+                                                content=content,
+                                                index=56,
                                             ),
                                             end_mark=create_mark(
-                                                line=3, col=7, content=content, index=57
+                                                line=3,
+                                                col=7,
+                                                content=content,
+                                                index=57,
                                             ),
                                         )
                                     ),
                                     TokenNode(
                                         yaml.ScalarToken(
                                             start_mark=create_mark(
-                                                line=3, col=8, content=content, index=58
+                                                line=3,
+                                                col=8,
+                                                content=content,
+                                                index=58,
                                             ),
                                             end_mark=create_mark(
                                                 line=3,
@@ -226,17 +259,26 @@ def test_complex_parameter_state():
                                     TokenNode(
                                         yaml.BlockEntryToken(
                                             start_mark=create_mark(
-                                                line=4, col=6, content=content, index=76
+                                                line=4,
+                                                col=6,
+                                                content=content,
+                                                index=76,
                                             ),
                                             end_mark=create_mark(
-                                                line=4, col=7, content=content, index=77
+                                                line=4,
+                                                col=7,
+                                                content=content,
+                                                index=77,
                                             ),
                                         )
                                     ),
                                     TokenNode(
                                         yaml.ScalarToken(
                                             start_mark=create_mark(
-                                                line=4, col=8, content=content, index=78
+                                                line=4,
+                                                col=8,
+                                                content=content,
+                                                index=78,
                                             ),
                                             end_mark=create_mark(
                                                 line=4,
@@ -251,17 +293,26 @@ def test_complex_parameter_state():
                                     TokenNode(
                                         yaml.BlockEntryToken(
                                             start_mark=create_mark(
-                                                line=5, col=6, content=content, index=89
+                                                line=5,
+                                                col=6,
+                                                content=content,
+                                                index=89,
                                             ),
                                             end_mark=create_mark(
-                                                line=5, col=7, content=content, index=90
+                                                line=5,
+                                                col=7,
+                                                content=content,
+                                                index=90,
                                             ),
                                         )
                                     ),
                                     TokenNode(
                                         yaml.ScalarToken(
                                             start_mark=create_mark(
-                                                line=5, col=8, content=content, index=91
+                                                line=5,
+                                                col=8,
+                                                content=content,
+                                                index=91,
                                             ),
                                             end_mark=create_mark(
                                                 line=5,
@@ -279,5 +330,5 @@ def test_complex_parameter_state():
                     )
                 ],
             )
-        ]
+        ],
     )

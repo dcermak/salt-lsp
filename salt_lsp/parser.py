@@ -269,16 +269,22 @@ def parse(document: str) -> Tree:
     try:
         for token in tokens:
             if isinstance(token, yaml.StreamStartToken):
-                tree.start = Position(line=token.start_mark.line, col=token.start_mark.column)
+                tree.start = Position(
+                    line=token.start_mark.line, col=token.start_mark.column
+                )
             if isinstance(token, yaml.StreamEndToken):
-                tree.end = Position(line=token.end_mark.line, col=token.end_mark.column)
+                tree.end = Position(
+                    line=token.end_mark.line, col=token.end_mark.column
+                )
 
             if isinstance(token, yaml.BlockMappingStartToken):
                 if not breadcrumbs:
                     # Top level mapping block
                     breadcrumbs.append(tree)
                 if not last_start:
-                    last_start = Position(line=token.start_mark.line, col=token.start_mark.column)
+                    last_start = Position(
+                        line=token.start_mark.line, col=token.start_mark.column
+                    )
 
             if isinstance(token, yaml.ValueToken) and isinstance(
                 breadcrumbs[-1], StateParameterNode
@@ -306,7 +312,9 @@ def parse(document: str) -> Tree:
             if isinstance(token, yaml.BlockEndToken):
                 last = breadcrumbs.pop()
                 if not isinstance(last, TokenNode):
-                    last.end = Position(line=token.end_mark.line, col=token.end_mark.column)
+                    last.end = Position(
+                        line=token.end_mark.line, col=token.end_mark.column
+                    )
                 if isinstance(last, StateParameterNode):
                     if (
                         len(unprocessed_tokens) == 1
@@ -326,11 +334,17 @@ def parse(document: str) -> Tree:
 
             if isinstance(token, yaml.BlockEntryToken):
                 # Store the token for the parameter and requisite start position since those are dicts in lists
-                if isinstance(breadcrumbs[-1], (StateCallNode, RequisitesNode)):
-                    last_start = Position(line=token.start_mark.line, col=token.start_mark.column)
+                if isinstance(
+                    breadcrumbs[-1], (StateCallNode, RequisitesNode)
+                ):
+                    last_start = Position(
+                        line=token.start_mark.line, col=token.start_mark.column
+                    )
                 if isinstance(breadcrumbs[-1], IncludesNode):
                     breadcrumbs.append(breadcrumbs[-1].add())
-                    breadcrumbs[-1].start = Position(line=token.start_mark.line, col=token.start_mark.column)
+                    breadcrumbs[-1].start = Position(
+                        line=token.start_mark.line, col=token.start_mark.column
+                    )
 
             if isinstance(token, yaml.ScalarToken):
                 if next_scalar_as_key:
@@ -341,7 +355,9 @@ def parse(document: str) -> Tree:
                 if isinstance(breadcrumbs[-1], IncludeNode):
                     include = breadcrumbs.pop()
                     include.value = token.value
-                    include.end = Position(line=token.end_mark.line, col=token.end_mark.column)
+                    include.end = Position(
+                        line=token.end_mark.line, col=token.end_mark.column
+                    )
                 if isinstance(breadcrumbs[-1], RequisiteNode):
                     breadcrumbs[-1].reference = token.value
     except yaml.scanner.ScannerError:
