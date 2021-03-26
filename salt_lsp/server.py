@@ -64,13 +64,12 @@ class SlsFile:
                 and isinstance(self.parsed_contents["include"], list)
                 and top_sls_location is not None
             ):
-                top_sls_dir = dirname(top_sls_location)
                 self.includes = list(
                     f"file:////{path}"
                     for path in filter(
                         None,
                         (
-                            SlsFile.resolve_include(top_sls_dir, inc)
+                            SlsFile.resolve_include(top_sls_location, inc)
                             for inc in self.parsed_contents["include"]
                         ),
                     )
