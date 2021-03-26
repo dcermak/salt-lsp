@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import yaml
-from typing import Any, List, Mapping
+from typing import Any, List, Mapping, Optional
 
 
 @dataclass
@@ -24,13 +24,27 @@ class AstNode:
     Base class for all nodes of the Abstract Syntax Tree
     """
 
-    start: Position = None
-    end: Position = None
+    start: Optional[Position] = None
+    end: Optional[Position] = None
+
+
+class AstMapNode(AstNode):
+    """
+    Base class for all node that are mappings
+    """
+
+    def add_key(self: AstMapNode, key: str) -> AstNode:
+        """
+        Abstract function to add an item
+
+        :param key: key of the item to add
+        """
+        raise NotImplementedError()
 
 
 @dataclass
 class IncludeNode(AstNode):
-    value: str = None
+    value: Optional[str] = None
 
     def get_file(self: IncludeNode, top_path: str) -> str:
         """
@@ -48,7 +62,7 @@ class IncludesNode(AstNode):
     Node representing the list of includes
     """
 
-    includes: List(IncludeNode) = field(default_factory=list)
+    includes: List[IncludeNode] = field(default_factory=list)
 
     def add(self: IncludesNode) -> IncludeNode:
         self.includes.append(IncludeNode())
@@ -61,7 +75,7 @@ class StateParameterNode(AstNode):
     Node representing a parameter of the state definition.
     """
 
-    name: str = None
+    name: Optional[str] = None
     value: Any = None
 
 
@@ -71,20 +85,20 @@ class RequisiteNode(AstNode):
     Node reprensenting one requisite
     """
 
-    module: str = None
-    reference: str = None
+    module: Optional[str] = None
+    reference: Optional[str] = None
 
 
 @dataclass
-class RequisitesNode(AstNode):
+class RequisitesNode(AstMapNode):
     """
     Node Representing the list of requisites of a state
     """
 
-    kind: str = None
-    requisites: List(RequisiteNode) = field(default_factory=list)
+    kind: Optional[str] = None
+    requisites: List[RequisiteNode] = field(default_factory=list)
 
-    def add_key(self: StateCallNode, key: str) -> None:
+    def add_key(self: RequisitesNode, key: str) -> AstNode:
         """
         Add a key token to the tree, the value will come later
 
@@ -95,7 +109,7 @@ class RequisitesNode(AstNode):
 
 
 @dataclass
-class StateCallNode(AstNode):
+class StateCallNode(AstMapNode):
     """
     Node representing the state call part of the state definition.
     For instance it represents the following part:
@@ -116,11 +130,11 @@ class StateCallNode(AstNode):
               - source: salt://libvirt/libvirtd.conf
     """
 
-    name: str = None
+    name: Optional[str] = None
     parameters: List[StateParameterNode] = field(default_factory=list)
     requisites: List[RequisitesNode] = field(default_factory=list)
 
-    def add_key(self: StateCallNode, key: str) -> None:
+    def add_key(self: StateCallNode, key: str) -> AstNode:
         """
         Add a key token to the tree, the value will come later
 
@@ -149,7 +163,7 @@ class StateCallNode(AstNode):
 
 
 @dataclass
-class StateNode(AstNode):
+class StateNode(AstMapNode):
     """
     Node representing a state definition like the following.
 
@@ -161,10 +175,10 @@ class StateNode(AstNode):
               - source: salt://libvirt/libvirtd.conf
     """
 
-    identifier: str = None
+    identifier: Optional[str] = None
     states: List[StateCallNode] = field(default_factory=list)
 
-    def add_key(self: StateNode, key: str) -> None:
+    def add_key(self: StateNode, key: str) -> AstNode:
         """
         Add a key token to the tree, the value will come later
 
@@ -175,14 +189,14 @@ class StateNode(AstNode):
 
 
 @dataclass
-class ExtendNode(AstNode):
+class ExtendNode(AstMapNode):
     """
     Node representing an ``extend`` declaration
     """
 
     states: List[StateNode] = field(default_factory=list)
 
-    def add_key(self: ExtendNode, key: str) -> None:
+    def add_key(self: ExtendNode, key: str) -> AstNode:
         """
         Add a key token to the tree, the value will come later
 
@@ -193,16 +207,16 @@ class ExtendNode(AstNode):
 
 
 @dataclass
-class Tree(AstNode):
+class Tree(AstMapNode):
     """
     Node representing the whole SLS file
     """
 
-    includes: IncludesNode = None
-    extend: ExtendNode = None
+    includes: Optional[IncludesNode] = None
+    extend: Optional[ExtendNode] = None
     states: List[StateNode] = field(default_factory=list)
 
-    def add_key(self: Tree, key: str) -> None:
+    def add_key(self: Tree, key: str) -> AstNode:
         """
         Add a key token to the tree, the value will come later
 
@@ -222,9 +236,9 @@ class Tree(AstNode):
 
 @dataclass(init=False, eq=False)
 class TokenNode(AstNode):
-    token: yaml.Token = None
+    token: yaml.Token
 
-    def __init__(self: TokenNode, token: yaml.Token = None):
+    def __init__(self: TokenNode, token: yaml.Token):
         super().__init__(
             start=Position(
                 line=token.start_mark.line, col=token.start_mark.column
@@ -239,16 +253,11 @@ class TokenNode(AstNode):
         ):
             return False
 
+        is_scalar = isinstance(self.token, yaml.ScalarToken)
         scalar_equal = (
-            self.is_scalar() and self.token.value == other.token.value
+            is_scalar and self.token.value == other.token.value
         )
-        return super().__eq__(other) and (scalar_equal or not self.is_scalar())
-
-    def is_scalar(self):
-        """
-        :return: whether the token is a scalar one
-        """
-        return isinstance(self.token, yaml.ScalarToken)
+        return super().__eq__(other) and (scalar_equal or not is_scalar)
 
 
 def parse(document: str) -> Tree:
@@ -260,9 +269,9 @@ def parse(document: str) -> Tree:
     :raises ValueException: for any other renderer but ``jinja|yaml``
     """
     tree = Tree()
-    breadcrumbs = []
+    breadcrumbs: List[AstNode] = []
     next_scalar_as_key = False
-    unprocessed_tokens = None
+    unprocessed_tokens: Optional[List[TokenNode]] = None
     last_start = None
 
     tokens = yaml.scan(document)
@@ -315,10 +324,9 @@ def parse(document: str) -> Tree:
                     last.end = Position(
                         line=token.end_mark.line, col=token.end_mark.column
                     )
-                if isinstance(last, StateParameterNode):
-                    if (
-                        len(unprocessed_tokens) == 1
-                        and unprocessed_tokens[0].is_scalar()
+                if isinstance(last, StateParameterNode) and unprocessed_tokens is not None:
+                    if (len(unprocessed_tokens) == 1
+                        and isinstance(unprocessed_tokens[0].token, yaml.ScalarToken)
                     ):
                         last.value = unprocessed_tokens[0].token.value
                     else:
@@ -347,20 +355,20 @@ def parse(document: str) -> Tree:
                     )
 
             if isinstance(token, yaml.ScalarToken):
-                if next_scalar_as_key:
+                if next_scalar_as_key and isinstance(breadcrumbs[-1], AstMapNode):
                     breadcrumbs.append(breadcrumbs[-1].add_key(token.value))
                     breadcrumbs[-1].start = last_start
                     last_start = None
                     next_scalar_as_key = False
                 if isinstance(breadcrumbs[-1], IncludeNode):
-                    include = breadcrumbs.pop()
-                    include.value = token.value
-                    include.end = Position(
+                    breadcrumbs[-1].value = token.value
+                    breadcrumbs[-1].end = Position(
                         line=token.end_mark.line, col=token.end_mark.column
                     )
+                    breadcrumbs.pop()
                 if isinstance(breadcrumbs[-1], RequisiteNode):
                     breadcrumbs[-1].reference = token.value
     except yaml.scanner.ScannerError:
         # TODO We may want to check if the error occurs at the searched position
-        return []
+        return tree
     return tree
