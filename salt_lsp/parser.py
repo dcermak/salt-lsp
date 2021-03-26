@@ -254,9 +254,7 @@ class TokenNode(AstNode):
             return False
 
         is_scalar = isinstance(self.token, yaml.ScalarToken)
-        scalar_equal = (
-            is_scalar and self.token.value == other.token.value
-        )
+        scalar_equal = is_scalar and self.token.value == other.token.value
         return super().__eq__(other) and (scalar_equal or not is_scalar)
 
 
@@ -324,9 +322,12 @@ def parse(document: str) -> Tree:
                     last.end = Position(
                         line=token.end_mark.line, col=token.end_mark.column
                     )
-                if isinstance(last, StateParameterNode) and unprocessed_tokens is not None:
-                    if (len(unprocessed_tokens) == 1
-                        and isinstance(unprocessed_tokens[0].token, yaml.ScalarToken)
+                if (
+                    isinstance(last, StateParameterNode)
+                    and unprocessed_tokens is not None
+                ):
+                    if len(unprocessed_tokens) == 1 and isinstance(
+                        unprocessed_tokens[0].token, yaml.ScalarToken
                     ):
                         last.value = unprocessed_tokens[0].token.value
                     else:
@@ -355,7 +356,9 @@ def parse(document: str) -> Tree:
                     )
 
             if isinstance(token, yaml.ScalarToken):
-                if next_scalar_as_key and isinstance(breadcrumbs[-1], AstMapNode):
+                if next_scalar_as_key and isinstance(
+                    breadcrumbs[-1], AstMapNode
+                ):
                     breadcrumbs.append(breadcrumbs[-1].add_key(token.value))
                     breadcrumbs[-1].start = last_start
                     last_start = None
