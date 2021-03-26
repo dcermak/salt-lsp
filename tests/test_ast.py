@@ -3,6 +3,28 @@ import yaml
 from salt_lsp.parser import *
 
 
+class TestIncludeNode:
+    def test_get_file_with_no_value(self):
+        assert IncludeNode(value=None).get_file("") is None
+
+    def test_get_file_from_init_sls(self, fs):
+        fs.create_file("/repo/root/foo/init.sls")
+        assert (
+            IncludeNode(value="foo").get_file("/repo/root/top.sls")
+            == "/repo/root/foo/init.sls"
+        )
+
+    def test_get_file_from_foo_sls(self, fs):
+        fs.create_file("/repo/root/foo.sls")
+        assert (
+            IncludeNode(value="foo").get_file("/repo/root/top.sls")
+            == "/repo/root/foo.sls"
+        )
+
+    def test_get_file_when_sls_not_present(self):
+        assert IncludeNode(value="foo").get_file("/repo/root/top.sls") is None
+
+
 def test_includes():
     content = """include:
   - foo.bar

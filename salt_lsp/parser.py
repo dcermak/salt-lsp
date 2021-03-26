@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import yaml
+from os.path import abspath, dirname, exists, join
 from typing import Any, List, Mapping, Optional
 
 
@@ -46,14 +47,25 @@ class AstMapNode(AstNode):
 class IncludeNode(AstNode):
     value: Optional[str] = None
 
-    def get_file(self: IncludeNode, top_path: str) -> str:
+    def get_file(self: IncludeNode, top_path: str) -> Optional[str]:
         """
         Convert the dotted value of the include into a proper file path
         based on the path of the top of the states folder.
 
         :param top_path: the path to the top states folder
         """
-        # TODO Implement me
+        if self.value is None:
+            return None
+
+        top_path = dirname(abspath(top_path))
+        dest = join(*self.value.split("."))
+        init_sls_path = join(top_path, dest, "init.sls")
+        entry_sls_path = join(top_path, f"{dest}.sls")
+        if exists(init_sls_path):
+            return init_sls_path
+        if exists(entry_sls_path):
+            return entry_sls_path
+        return None
 
 
 @dataclass
