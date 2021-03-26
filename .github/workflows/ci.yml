@@ -49,7 +49,7 @@ jobs:
       - name: run black
         run: |
           . .env3/bin/activate
-          python -m black --check --diff -l 79 salt_lsp/*py tests/*py *py
+          python -m black --check --diff salt_lsp/*py tests/*py *py
 
       - name: run mypy
         run: |
