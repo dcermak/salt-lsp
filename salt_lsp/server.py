@@ -65,7 +65,7 @@ class SlsFile:
                 and top_sls_location is not None
             ):
                 self.includes = list(
-                    f"file:////{path}"
+                    f"file://{path}"
                     for path in filter(
                         None,
                         (
