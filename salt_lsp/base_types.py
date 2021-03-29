@@ -25,10 +25,7 @@ class StateNameCompletion:
 
         for submod in state_params:
             submod_name = next(iter(submod.keys()))
-            docs = None
-            key = f"{state_name}.{submod_name}"
-            if key in module_docs:
-                docs = module_docs[key]
+            docs = module_docs.get(f"{state_name}.{submod_name}")
 
             self.state_params[submod_name] = StateParameters(
                 submod[submod_name], docs
