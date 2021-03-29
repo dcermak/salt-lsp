@@ -54,7 +54,7 @@ class AstNode:
     end: Optional[Position] = None
     parent: Optional[AstNode] = field(compare=False, default=None, repr=False)
 
-    def visit(self: AstNode, visitor: Callable[[AstNode, bool]]) -> None:
+    def visit(self: AstNode, visitor: Callable[[AstNode], bool]) -> None:
         """
         Apply a visitor function to the node and apply it on children if the function returns True.
         """
@@ -80,7 +80,7 @@ class AstMapNode(AstNode, ABC):
         """
         raise NotImplementedError()
 
-    def visit(self: AstNode, visitor: Callable[[AstNode, bool]]) -> None:
+    def visit(self, visitor: Callable[[AstNode], bool]) -> None:
         """
         Apply a visitor function to the node and apply it on children if the function returns True.
         """
