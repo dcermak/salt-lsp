@@ -3,6 +3,7 @@ Module defining and building an AST from the SLS file.
 """
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 import yaml
 from os.path import abspath, dirname, exists, join
@@ -59,11 +60,12 @@ class AstNode:
         visitor(self)
 
 
-class AstMapNode(AstNode):
+class AstMapNode(AstNode, ABC):
     """
-    Base class for all node that are mappings
+    Base class for all nodes that are mappings
     """
 
+    @abstractmethod
     def add_key(self: AstMapNode, key: str) -> AstNode:
         """
         Abstract function to add an item
