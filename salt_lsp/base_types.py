@@ -22,6 +22,7 @@ class StateNameCompletion:
     ) -> None:
         self.state_name = state_name
         self.state_params: Dict[str, StateParameters] = {}
+        self.state_docs: Optional[str] = module_docs.get(state_name)
 
         for submod in state_params:
             submod_name = next(iter(submod.keys()))
