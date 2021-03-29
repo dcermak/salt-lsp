@@ -50,3 +50,6 @@ class StateNameCompletion:
 
     def provide_param_completion(self, submod_name: str) -> List[str]:
         return list(self.state_params[submod_name].parameters.keys())
+
+
+CompletionsDict = Dict[str, StateNameCompletion]

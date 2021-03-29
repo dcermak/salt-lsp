@@ -7,6 +7,7 @@ from os.path import dirname, abspath, join
 from typing import Dict
 
 from salt_lsp.server import salt_server
+from salt_lsp.base_types import StateNameCompletion
 
 LOG_LEVEL_DICT: Dict[str, int] = {
     "critical": logging.CRITICAL,
@@ -68,7 +69,8 @@ def main():
     with open(
         join(dirname(abspath(__file__)), "data", "states.pickle"), "rb"
     ) as states_file:
-        states = pickle.load(states_file)
+        states: Dict[str, StateNameCompletion] = pickle.load(states_file)
+
     salt_server.post_init(states, log_level)
 
     if args.stop_after_init:
