@@ -52,6 +52,7 @@ class AstNode:
 
     start: Optional[Position] = None
     end: Optional[Position] = None
+    parent: Optional[AstNode] = field(compare=False, default=None)
 
     def visit(self: AstNode, visitor: Callable[[AstNode, bool]]) -> None:
         """
@@ -162,7 +163,7 @@ class RequisitesNode(AstMapNode):
 
         :return: the added node
         """
-        self.requisites.append(RequisiteNode(module=key))
+        self.requisites.append(RequisiteNode(module=key, parent=self))
         return self.requisites[-1]
 
     def get_children(self: AstMapNode) -> List[AstNode]:
@@ -219,10 +220,10 @@ class StateCallNode(AstMapNode):
             + [k + "_in" for k in requisites_keys]
         )
         if key in all_requisites_keys:
-            self.requisites.append(RequisitesNode(kind=key))
+            self.requisites.append(RequisitesNode(kind=key, parent=self))
             return self.requisites[-1]
 
-        self.parameters.append(StateParameterNode(name=key))
+        self.parameters.append(StateParameterNode(name=key, parent=self))
         return self.parameters[-1]
 
     def get_children(self: AstMapNode) -> List[AstNode]:
@@ -254,7 +255,7 @@ class StateNode(AstMapNode):
 
         :return: the added node
         """
-        self.states.append(StateCallNode(name=key))
+        self.states.append(StateCallNode(name=key, parent=self))
         return self.states[-1]
 
     def get_children(self: AstMapNode) -> List[AstNode]:
@@ -278,7 +279,7 @@ class ExtendNode(AstMapNode):
 
         :return: the added node
         """
-        self.states.append(StateNode(identifier=key))
+        self.states.append(StateNode(identifier=key, parent=self))
         return self.states[-1]
 
     def get_children(self: AstMapNode) -> List[AstNode]:
@@ -305,14 +306,14 @@ class Tree(AstMapNode):
         :return: the added node
         """
         if key == "include":
-            self.includes = IncludesNode()
+            self.includes = IncludesNode(parent=self)
             return self.includes
 
         if key == "extend":
-            self.extend = ExtendNode()
+            self.extend = ExtendNode(parent=self)
             return self.extend
 
-        self.states.append(StateNode(identifier=key))
+        self.states.append(StateNode(identifier=key, parent=self))
         return self.states[-1]
 
     def get_children(self: AstMapNode) -> List[AstNode]:
@@ -424,6 +425,8 @@ class Parser:
                 ):
                     last.value = self._unprocessed_tokens[0].token.value
                 else:
+                    for unprocessed in self._unprocessed_tokens:
+                        unprocessed.parent = last
                     last.value = self._unprocessed_tokens
                 self._unprocessed_tokens = None
 
