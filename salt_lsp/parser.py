@@ -168,7 +168,7 @@ class StateParameterNode(AstNode):
 @dataclass
 class RequisiteNode(AstNode):
     """
-    Node reprensenting one requisite
+    Node representing one requisite
     """
 
     module: Optional[str] = None
