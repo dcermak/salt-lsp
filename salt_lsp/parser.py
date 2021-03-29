@@ -7,12 +7,33 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from os.path import abspath, dirname, exists, join
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
+from typing import (
+    Any,
+    Callable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypedDict,
+    Union,
+    cast,
+)
 
+from pygls.lsp import types
 import yaml
 from yaml.tokens import BlockEndToken, ScalarToken
 
+from salt_lsp.base_types import CompletionsDict
+
+
 log = logging.getLogger(__name__)
+
+
+class DocumentSymbolKWArgs(TypedDict):
+    name: str
+    range: types.Range
+    selection_range: types.Range
+    kind: types.SymbolKind
 
 
 @dataclass
@@ -48,9 +69,13 @@ class Position:
     def __ge__(self, other):
         return self > other or self == other
 
+    def to_lsp_pos(self) -> types.Position:
+        """Convert this position to pygls' native Position type."""
+        return types.Position(line=self.line, character=self.col)
+
 
 @dataclass
-class AstNode:
+class AstNode(ABC):
     """
     Base class for all nodes of the Abstract Syntax Tree
     """
@@ -64,6 +89,45 @@ class AstNode:
         Apply a visitor function to the node and apply it on children if the function returns True.
         """
         visitor(self)
+
+    @abstractmethod
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        """
+        Converts this node into a DocumentSymbol unless some crucial
+        information are missing.
+        """
+        raise NotImplementedError()
+
+    def to_range(self) -> Optional[types.Range]:
+        if self.start is None or self.end is None:
+            return None
+        return types.Range(
+            start=self.start.to_lsp_pos(), end=self.end.to_lsp_pos()
+        )
+
+    def _document_symbol_init_kwargs(
+        self,
+        string_identifier: Optional[str],
+        symbol_kind: types.SymbolKind = types.SymbolKind.Object,
+    ) -> Optional[DocumentSymbolKWArgs]:
+        if string_identifier is None or self.start is None or self.end is None:
+            return None
+        lsp_range = self.to_range()
+        assert lsp_range is not None
+        return {
+            "name": string_identifier,
+            "range": lsp_range,
+            "selection_range": types.Range(
+                start=self.start.to_lsp_pos(),
+                end=types.Position(
+                    line=self.start.line,
+                    character=self.start.col + len(string_identifier),
+                ),
+            ),
+            "kind": symbol_kind,
+        }
 
 
 class AstMapNode(AstNode, ABC):
@@ -102,6 +166,14 @@ class IncludeNode(AstNode):
 
     value: Optional[str] = None
 
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        kwargs = self._document_symbol_init_kwargs(
+            self.value, types.SymbolKind.String
+        )
+        return None if kwargs is None else types.DocumentSymbol(**kwargs)
+
     def get_file(self: IncludeNode, top_path: str) -> Optional[str]:
         """
         Convert the dotted value of the include into a proper file path
@@ -137,6 +209,24 @@ class IncludesNode(AstNode):
         """
         self.includes.append(IncludeNode())
         return self.includes[-1]
+
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        kwargs = self._document_symbol_init_kwargs("includes")
+
+        return (
+            None
+            if kwargs is None
+            else types.DocumentSymbol(
+                children=list(
+                    child.to_document_symbol for child in self.includes
+                ),
+                detail="""A list of included SLS files.
+See also https://docs.saltproject.io/en/latest/ref/states/include.html""",
+                **kwargs,
+            )
+        )
 
 
 @dataclass
@@ -176,6 +266,12 @@ class StateParameterNode(AstNode):
         self.name = key
         return self
 
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        kwargs = self._document_symbol_init_kwargs(self.name)
+        return None if kwargs is None else types.DocumentSymbol(**kwargs)
+
 
 @dataclass
 class RequisiteNode(AstNode):
@@ -195,6 +291,17 @@ class RequisiteNode(AstNode):
         """
         self.module = key
         return self
+
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        kwargs = self._document_symbol_init_kwargs(self.module)
+        if kwargs is None:
+            return None
+        detail = None
+        if self.module in state_completions:
+            detail = state_completions[self.module].state_docs
+        return types.DocumentSymbol(detail=detail, **kwargs)
 
 
 @dataclass
@@ -230,6 +337,25 @@ class RequisitesNode(AstMapNode):
         Returns all the children nodes
         """
         return self.requisites
+
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        kwargs = self._document_symbol_init_kwargs(self.kind)
+        return (
+            None
+            if kwargs is None
+            else types.DocumentSymbol(
+                detail="""List of requisites.
+See also: https://docs.saltproject.io/en/latest/ref/states/requisites.html
+""",
+                children=list(
+                    req.to_document_symbol(state_completions)
+                    for req in self.requisites
+                ),
+                **kwargs,
+            )
+        )
 
 
 @dataclass
@@ -293,6 +419,26 @@ class StateCallNode(AstMapNode):
             List[AstNode], self.requisites
         )
 
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        kwargs = self._document_symbol_init_kwargs(self.name)
+        detail = None
+        if self.name in state_completions:
+            detail = state_completions[self.name].state_docs
+        return (
+            None
+            if kwargs is None
+            else types.DocumentSymbol(
+                children=list(
+                    state.to_document_symbol(state_completions)
+                    for state in self.parameters + self.requisites
+                ),
+                detail=detail,
+                **kwargs,
+            )
+        )
+
 
 @dataclass
 class StateNode(AstMapNode):
@@ -337,6 +483,22 @@ class StateNode(AstMapNode):
         """
         return self.states
 
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        kwargs = self._document_symbol_init_kwargs(self.identifier)
+        return (
+            None
+            if kwargs is None
+            else types.DocumentSymbol(
+                children=list(
+                    state.to_document_symbol(state_completions)
+                    for state in self.states
+                ),
+                **kwargs,
+            )
+        )
+
 
 @dataclass
 class ExtendNode(AstMapNode):
@@ -360,6 +522,25 @@ class ExtendNode(AstMapNode):
         Returns all the children nodes
         """
         return self.states
+
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        kwargs = self._document_symbol_init_kwargs("extend")
+        return (
+            None
+            if kwargs is None
+            else types.DocumentSymbol(
+                children=list(
+                    state.to_document_symbol(state_completions)
+                    for state in self.states
+                ),
+                detail="""Extension of external SLS data.
+See: https://docs.saltproject.io/en/latest/ref/states/extend.html
+""",
+                **kwargs,
+            )
+        )
 
 
 @dataclass
@@ -416,6 +597,11 @@ class Tree(AstMapNode):
             + cast(List[AstNode], self.states)
         )
 
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        return None
+
 
 @dataclass(init=False, eq=False)
 class TokenNode(AstNode):
@@ -443,6 +629,11 @@ class TokenNode(AstNode):
         is_scalar = isinstance(self.token, yaml.ScalarToken)
         scalar_equal = is_scalar and self.token.value == other.token.value
         return super().__eq__(other) and (scalar_equal or not is_scalar)
+
+    def to_document_symbol(
+        self, state_completions: CompletionsDict
+    ) -> Optional[types.DocumentSymbol]:
+        raise NotImplementedError()
 
 
 class Parser:

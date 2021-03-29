@@ -6,15 +6,16 @@ import logging
 import re
 from dataclasses import dataclass, field
 from os.path import basename, exists, join
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from pygls.capabilities import COMPLETION
 from pygls.lsp import types
 from pygls.lsp.methods import (
-    DEFINITION,
     TEXT_DOCUMENT_DID_CHANGE,
     TEXT_DOCUMENT_DID_CLOSE,
     TEXT_DOCUMENT_DID_OPEN,
+    DEFINITION,
+    DOCUMENT_SYMBOL,
 )
 from pygls.lsp.types import (
     CompletionItem,
@@ -27,7 +28,12 @@ from ruamel import yaml
 
 import salt_lsp.utils as utils
 from salt_lsp.base_types import StateNameCompletion
-from salt_lsp.parser import IncludesNode, RequisiteNode, StateParameterNode
+from salt_lsp.parser import (
+    IncludesNode,
+    RequisiteNode,
+    StateParameterNode,
+    parse,
+)
 
 
 @dataclass(init=False)
@@ -359,3 +365,35 @@ def did_close(salt_srv: SaltServer, params: types.DidCloseTextDocumentParams):
 def did_open(salt_srv: SaltServer, params: types.DidOpenTextDocumentParams):
     """Text document did open notification."""
     salt_srv.register_file(params)
+
+
+@salt_server.feature(DOCUMENT_SYMBOL)
+def document_symbol(
+    salt_srv: SaltServer, params: types.DocumentSymbolParams
+) -> Optional[
+    Union[List[types.DocumentSymbol], List[types.SymbolInformation]]
+]:
+    sls_file = salt_srv.get_sls_file(params.text_document.uri)
+    # FIXME: register & read in file now
+    if sls_file is None:
+        return None
+
+    tree = parse(sls_file.contents)
+    document_symbols: List[types.DocumentSymbol] = []
+
+    if tree.includes is not None:
+        document_symbols.append(
+            tree.includes.to_document_symbol(salt_srv._state_name_completions)
+        )
+
+    if tree.extend is not None:
+        document_symbols.append(
+            tree.extend.to_document_symbol(salt_srv._state_name_completions)
+        )
+
+    for state in tree.states:
+        document_symbols.append(
+            state.to_document_symbol(salt_srv._state_name_completions)
+        )
+
+    return document_symbols
