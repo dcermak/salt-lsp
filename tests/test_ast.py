@@ -398,6 +398,71 @@ def test_duplicate_key():
     )
 
 
+def test_empty_requisite_item():
+    content = """/etc/systemd/system/rootco-salt-backup.service:
+  file.managed:
+    - user: root
+    - group: root
+    - require:
+      - file: /foo/bar
+      - 
+"""
+    tree = parse(content)
+    assert tree == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=7, col=0),
+        states=[
+            StateNode(
+                start=Position(line=0, col=0),
+                end=Position(line=7, col=0),
+                identifier="/etc/systemd/system/rootco-salt-backup.service",
+                states=[
+                    StateCallNode(
+                        start=Position(line=1, col=2),
+                        end=Position(line=7, col=0),
+                        name="file.managed",
+                        parameters=[
+                            StateParameterNode(
+                                start=Position(line=2, col=4),
+                                end=Position(line=3, col=4),
+                                name="user",
+                                value="root",
+                            ),
+                            StateParameterNode(
+                                start=Position(line=3, col=4),
+                                end=Position(line=4, col=4),
+                                name="group",
+                                value="root",
+                            ),
+                        ],
+                        requisites=[
+                            RequisitesNode(
+                                start=Position(line=4, col=4),
+                                end=Position(line=7, col=0),
+                                kind="require",
+                                requisites=[
+                                    RequisiteNode(
+                                        start=Position(line=5, col=6),
+                                        end=Position(line=6, col=6),
+                                        module="file",
+                                        reference="/foo/bar",
+                                    ),
+                                    RequisiteNode(
+                                        start=Position(line=6, col=6),
+                                        end=Position(line=7, col=0),
+                                        module=None,
+                                        reference=None,
+                                    ),
+                                ],
+                            )
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+
+
 def test_visit():
     content = """/etc/systemd/system/rootco-salt-backup.service:
   file.managed:
@@ -405,18 +470,17 @@ def test_visit():
     - group: root
 """
     tree = parse(content)
-    context = []
     pos = Position(line=2, col=8)
     found_node = None
 
     def visitor(node: AstNode) -> bool:
         if pos >= node.start and pos < node.end:
+            nonlocal found_node
             found_node = node
-            return False
         return True
 
     tree.visit(visitor)
-    found_node = StateParameterNode(
+    assert found_node == StateParameterNode(
         start=Position(line=2, col=4),
         end=Position(line=3, col=4),
         name="user",
