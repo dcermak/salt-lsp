@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import yaml
 from os.path import abspath, dirname, exists, join
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Mapping, Optional
 
 
 @dataclass
@@ -18,6 +18,30 @@ class Position:
     line: int
     col: int
 
+    def __lt__(self, other):
+        if not isinstance(other, Position):
+            return NotImplemented
+        return (
+            self.line < other.line
+            or self.line == other.line
+            and self.col < other.col
+        )
+
+    def __gt__(self, other):
+        if not isinstance(other, Position):
+            return NotImplemented
+        return (
+            self.line > other.line
+            or self.line == other.line
+            and self.col > other.col
+        )
+
+    def __le__(self, other):
+        return self < other or self == other
+
+    def __ge__(self, other):
+        return self > other or self == other
+
 
 @dataclass
 class AstNode:
@@ -27,6 +51,12 @@ class AstNode:
 
     start: Optional[Position] = None
     end: Optional[Position] = None
+
+    def visit(self: AstNode, visitor: Callable[[AstNode, bool]]) -> None:
+        """
+        Apply a visitor function to the node and apply it on children if the function returns True.
+        """
+        visitor(self)
 
 
 class AstMapNode(AstNode):
@@ -41,6 +71,20 @@ class AstMapNode(AstNode):
         :param key: key of the item to add
         """
         raise NotImplementedError()
+
+    def get_children(self: AstMapNode) -> List[AstNode]:
+        """
+        Returns all the children nodes
+        """
+        raise NotImplementedError()
+
+    def visit(self: AstNode, visitor: Callable[[AstNode, bool]]) -> None:
+        """
+        Apply a visitor function to the node and apply it on children if the function returns True.
+        """
+        if visitor(self):
+            for child in self.get_children():
+                child.visit(visitor)
 
 
 @dataclass
@@ -119,6 +163,12 @@ class RequisitesNode(AstMapNode):
         self.requisites.append(RequisiteNode(module=key))
         return self.requisites[-1]
 
+    def get_children(self: AstMapNode) -> List[AstNode]:
+        """
+        Returns all the children nodes
+        """
+        return self.requisites
+
 
 @dataclass
 class StateCallNode(AstMapNode):
@@ -173,6 +223,12 @@ class StateCallNode(AstMapNode):
         self.parameters.append(StateParameterNode(name=key))
         return self.parameters[-1]
 
+    def get_children(self: AstMapNode) -> List[AstNode]:
+        """
+        Returns all the children nodes
+        """
+        return self.parameters + self.requisites
+
 
 @dataclass
 class StateNode(AstMapNode):
@@ -199,6 +255,12 @@ class StateNode(AstMapNode):
         self.states.append(StateCallNode(name=key))
         return self.states[-1]
 
+    def get_children(self: AstMapNode) -> List[AstNode]:
+        """
+        Returns all the children nodes
+        """
+        return self.states
+
 
 @dataclass
 class ExtendNode(AstMapNode):
@@ -216,6 +278,12 @@ class ExtendNode(AstMapNode):
         """
         self.states.append(StateNode(identifier=key))
         return self.states[-1]
+
+    def get_children(self: AstMapNode) -> List[AstNode]:
+        """
+        Returns all the children nodes
+        """
+        return self.states
 
 
 @dataclass
@@ -244,6 +312,12 @@ class Tree(AstMapNode):
 
         self.states.append(StateNode(identifier=key))
         return self.states[-1]
+
+    def get_children(self: AstMapNode) -> List[AstNode]:
+        """
+        Returns all the children nodes
+        """
+        return self.includes + [self.extend] + self.states
 
 
 @dataclass(init=False, eq=False)

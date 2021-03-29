@@ -1,6 +1,7 @@
 import yaml
 
 from salt_lsp.parser import *
+from typing import Callable
 
 
 class TestIncludeNode:
@@ -394,4 +395,30 @@ def test_duplicate_key():
                 ],
             )
         ],
+    )
+
+
+def test_visit():
+    content = """/etc/systemd/system/rootco-salt-backup.service:
+  file.managed:
+    - user: root
+    - group: root
+"""
+    tree = parse(content)
+    context = []
+    pos = Position(line=2, col=8)
+    found_node = None
+
+    def visitor(node: AstNode) -> bool:
+        if pos >= node.start and pos < node.end:
+            found_node = node
+            return False
+        return True
+
+    tree.visit(visitor)
+    found_node = StateParameterNode(
+        start=Position(line=2, col=4),
+        end=Position(line=3, col=4),
+        name="user",
+        value="root",
     )
