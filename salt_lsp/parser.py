@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 import yaml
 from os.path import abspath, dirname, exists, join
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
 
 
 @dataclass
@@ -265,7 +265,9 @@ class StateCallNode(AstMapNode):
         """
         Returns all the children nodes
         """
-        return self.parameters or [] + self.requisites or []
+        return cast(List[AstNode], self.parameters) + cast(
+            List[AstNode], self.requisites
+        )
 
 
 @dataclass
@@ -376,7 +378,11 @@ class Tree(AstMapNode):
         includes = [self.includes] if self.includes else []
         extend = [self.extend] if self.extend else []
 
-        return includes + extend + self.states or []
+        return (
+            cast(List[AstNode], includes)
+            + cast(List[AstNode], extend)
+            + cast(List[AstNode], self.states)
+        )
 
 
 @dataclass(init=False, eq=False)
