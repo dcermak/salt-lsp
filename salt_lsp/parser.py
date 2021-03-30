@@ -432,14 +432,16 @@ class Parser:
         """
         Process one token
         """
+        token_start = Position(
+            line=token.start_mark.line, col=token.start_mark.column
+        )
+        token_end = Position(
+            line=token.end_mark.line, col=token.end_mark.column
+        )
         if isinstance(token, yaml.StreamStartToken):
-            self._tree.start = Position(
-                line=token.start_mark.line, col=token.start_mark.column
-            )
+            self._tree.start = token_start
         if isinstance(token, yaml.StreamEndToken):
-            self._tree.end = Position(
-                line=token.end_mark.line, col=token.end_mark.column
-            )
+            self._tree.end = token_end
 
         if isinstance(token, yaml.BlockMappingStartToken):
             if not self._breadcrumbs:
@@ -483,13 +485,9 @@ class Parser:
                 and self._breadcrumbs[-1] != self._block_starts[-1][1]
             ):
                 closed = self._breadcrumbs.pop()
-                closed.end = Position(
-                    line=token.end_mark.line, col=token.end_mark.column
-                )
+                closed.end = token_end
             if not isinstance(last, TokenNode):
-                last.end = Position(
-                    line=token.end_mark.line, col=token.end_mark.column
-                )
+                last.end = token_end
             if (
                 isinstance(last, StateParameterNode)
                 and self._unprocessed_tokens is not None
@@ -520,20 +518,22 @@ class Parser:
                     self._breadcrumbs[-1].start = self._last_start
                     self._last_start = None
                 else:
-                    self._breadcrumbs[-1].start = Position(
-                        line=token.start_mark.line, col=token.start_mark.column
-                    )
+                    self._breadcrumbs[-1].start = token_start
 
         if isinstance(token, yaml.BlockEntryToken):
-            # Store the token for the parameter and requisite start position since those are dicts in lists
+            # Create the state parameter, include and requisite before the dict since those are dicts in lists
+            same_level = (
+                len(self._breadcrumbs) > 0
+                and self._breadcrumbs[-1].start.col == token.start_mark.column
+            )
+            if same_level:
+                self._breadcrumbs.pop().end = token_start
             if isinstance(
                 self._breadcrumbs[-1],
                 (StateCallNode, IncludesNode, RequisitesNode),
             ):
                 self._breadcrumbs.append(self._breadcrumbs[-1].add())
-                self._breadcrumbs[-1].start = Position(
-                    line=token.start_mark.line, col=token.start_mark.column
-                )
+                self._breadcrumbs[-1].start = token_start
 
         if isinstance(token, yaml.ScalarToken):
             if self._next_scalar_as_key and getattr(
@@ -556,9 +556,7 @@ class Parser:
                 self._next_scalar_as_key = False
             if isinstance(self._breadcrumbs[-1], IncludeNode):
                 self._breadcrumbs[-1].value = token.value
-                self._breadcrumbs[-1].end = Position(
-                    line=token.end_mark.line, col=token.end_mark.column
-                )
+                self._breadcrumbs[-1].end = token_end
                 self._breadcrumbs.pop()
             if isinstance(self._breadcrumbs[-1], RequisiteNode):
                 self._breadcrumbs[-1].reference = token.value

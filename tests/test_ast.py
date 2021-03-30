@@ -487,6 +487,88 @@ git -C /srv/salt pull -q:
     )
 
 
+def test_empty_parameter():
+    content = """/srv/git/salt-states:
+  file.symlink:
+    -
+    - target: /srv/salt
+"""
+    tree = parse(content)
+    assert tree == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=4, col=0),
+        states=[
+            StateNode(
+                start=Position(line=0, col=0),
+                end=Position(line=4, col=0),
+                identifier="/srv/git/salt-states",
+                states=[
+                    StateCallNode(
+                        start=Position(line=1, col=2),
+                        end=Position(line=4, col=0),
+                        name="file.symlink",
+                        parameters=[
+                            StateParameterNode(
+                                start=Position(line=2, col=4),
+                                end=Position(line=3, col=4),
+                                name=None,
+                                value=None,
+                            ),
+                            StateParameterNode(
+                                start=Position(line=3, col=4),
+                                end=Position(line=4, col=0),
+                                name="target",
+                                value="/srv/salt",
+                            ),
+                        ],
+                    )
+                ],
+            ),
+        ],
+    )
+
+
+def test_empty_last_parameter():
+    content = """/srv/git/salt-states:
+  file.symlink:
+    - target: /srv/salt
+    -
+"""
+    tree = parse(content)
+    assert tree == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=4, col=0),
+        states=[
+            StateNode(
+                start=Position(line=0, col=0),
+                end=Position(line=4, col=0),
+                identifier="/srv/git/salt-states",
+                states=[
+                    StateCallNode(
+                        start=Position(line=1, col=2),
+                        end=Position(line=4, col=0),
+                        name="file.symlink",
+                        parameters=[
+                            StateParameterNode(
+                                start=Position(line=2, col=4),
+                                end=Position(line=3, col=4),
+                                name="target",
+                                value="/srv/salt",
+                            ),
+                            StateParameterNode(
+                                start=Position(line=3, col=4),
+                                end=Position(line=4, col=0),
+                                name=None,
+                                value=None,
+                            ),
+                        ],
+                    )
+                ],
+            ),
+        ],
+    )
+
+
 def test_visit():
     content = """/etc/systemd/system/rootco-salt-backup.service:
   file.managed:
