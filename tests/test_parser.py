@@ -1,6 +1,13 @@
-from salt_lsp.utils import construct_path_to_position, position_to_index
+from salt_lsp.parser import (
+    RequisiteNode,
+    RequisitesNode,
+    StateCallNode,
+    StateNode,
+    StateParameterNode,
+    Tree,
+)
+from salt_lsp.utils import construct_path_to_position
 
-from ruamel import yaml
 from pygls.lsp.types import (
     Position,
 )
@@ -14,7 +21,7 @@ MASTER_DOT_SLS = """saltmaster.packages:
       - git
     - require:
       - file: /etc/foo/bar.conf
-      - 
+      -
 
 git -C /srv/salt pull -q:
   cron.present:
@@ -54,59 +61,74 @@ rootco-salt-backup.timer:
 """
 
 
-SLS_PARSED = yaml.load(MASTER_DOT_SLS, Loader=yaml.RoundTripLoader)
-
-
 class TestPathToPosition:
     def test_path_to_pkgs_list(self):
-        expected_res = [
-            "saltmaster.packages",
-            "pkg.installed",
-            0,
-            "pkgs",
-        ]
         for line in (3, 4, 5):
-            assert (
-                construct_path_to_position(
-                    SLS_PARSED, Position(line=line, character=7)
-                )
-                == expected_res
+            path = construct_path_to_position(
+                MASTER_DOT_SLS, Position(line=line, character=8)
             )
 
+            assert len(path) == 4
+            assert isinstance(path[0], Tree)
+            assert isinstance(path[1], StateNode)
+            assert path[1].identifier == "saltmaster.packages"
+            assert isinstance(path[2], StateCallNode)
+            assert path[2].name == "pkg.installed"
+            assert isinstance(path[3], StateParameterNode)
+            assert path[3].name == "pkgs"
+
     def test_path_to_require(self):
-        assert construct_path_to_position(
-            SLS_PARSED, Position(line=8, character=7)
-        ) == [
-            "saltmaster.packages",
-            "pkg.installed",
-            1,
-            "require",
-        ]
+        path = construct_path_to_position(
+            MASTER_DOT_SLS, Position(line=8, character=7)
+        )
+        assert len(path) == 5
+        assert isinstance(path[0], Tree)
+        assert isinstance(path[1], StateNode)
+        assert path[1].identifier == "saltmaster.packages"
+        assert isinstance(path[2], StateCallNode)
+        assert path[2].name == "pkg.installed"
+        assert isinstance(path[3], RequisitesNode)
+        assert path[3].kind == "require"
+        assert isinstance(path[4], RequisiteNode)
 
     def test_path_to_dummy(self):
-        assert construct_path_to_position(
-            SLS_PARSED, Position(line=14, character=7)
-        ) == [
-            "git -C /srv/salt pull -q",
-            "cron.present",
-            2,
-            "dummy",
-        ]
+        path = construct_path_to_position(
+            MASTER_DOT_SLS, Position(line=14, character=7)
+        )
+
+        assert len(path) == 4
+        assert isinstance(path[0], Tree)
+        assert isinstance(path[1], StateNode)
+        assert path[1].identifier == "git -C /srv/salt pull -q"
+        assert isinstance(path[2], StateCallNode)
+        assert path[2].name == "cron.present"
+        assert isinstance(path[3], StateParameterNode)
+        assert path[3].name == "dummy"
 
     def test_path_after_dummy(self):
-        assert construct_path_to_position(
-            SLS_PARSED, Position(line=15, character=5)
-        ) == [
-            "git -C /srv/salt pull -q",
-            "cron.present",
-        ]
+        path = construct_path_to_position(
+            MASTER_DOT_SLS, Position(line=15, character=5)
+        )
+
+        assert len(path) == 4
+        assert isinstance(path[0], Tree)
+        assert isinstance(path[1], StateNode)
+        assert path[1].identifier == "git -C /srv/salt pull -q"
+        assert isinstance(path[2], StateCallNode)
+        assert path[2].name == "cron.present"
+        assert isinstance(path[3], StateParameterNode)
+        assert path[3].name == "dummy"
 
     def test_path_before_target(self):
-        assert construct_path_to_position(
-            SLS_PARSED,
+        path = construct_path_to_position(
+            MASTER_DOT_SLS,
             # before "target: /srv/salt"
             Position(line=19, character=5),
-        ) == [
-            "/srv/git/salt-states",
-            "file.symlink",
-        ]
+        )
+
+        assert len(path) == 3
+        assert isinstance(path[0], Tree)
+        assert isinstance(path[1], StateNode)
+        assert path[1].identifier == "/srv/git/salt-states"
+        assert isinstance(path[2], StateCallNode)
+        assert path[2].name == "file.symlink"

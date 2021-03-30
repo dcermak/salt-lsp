@@ -10,6 +10,7 @@ import shlex
 from urllib.parse import urlparse
 from typing import Any, Iterator, Union, Optional, List, TypeVar
 
+import salt_lsp.parser as parser
 from pygls.lsp.types import (
     Position,
 )
@@ -54,71 +55,30 @@ def get_sls_includes(path: str) -> List[str]:
     return sls_files
 
 
-def _construct_path_to_position(
-    document: Any, pos: Position, cur_path: List[Union[str, int]]
-) -> Optional[List[Union[str, int]]]:
-    if not isinstance(document, OrderedDict) and not isinstance(
-        document, list
-    ):
-        return None
-
-    entries = (
-        document if isinstance(document, list) else list(document.values())
-    )
-    if len(entries) == 0:
-        return cur_path
-
-    match = entries[0] if hasattr(entries[0], "lc") else None
-    match_ind = 0
-
-    # Iterate over all entries in the document and find the first that is
-    # beyond the given position. Store the entry *before* that one in match and
-    # its index in match_index.
-    # Special case: if we hit the exact line, then that is the match and not
-    # the previous one
-    for ind, entry in enumerate(entries):
-        # entry can be a primitive type and will have no position information
-        # then => have to skip over these for lack of better knowledge
-        if hasattr(entry, "lc") and entry.lc.line >= pos.line:
-            if entry.lc.line == pos.line:
-                match, match_ind = entry, ind
-            break
-        match, match_ind = entry, ind
-
-    # add the current node to the path list
-    if isinstance(document, OrderedDict):
-        cur_path.append(list(document.keys())[match_ind])
-    elif isinstance(document, list):
-        cur_path.append(match_ind)
-
-    if isinstance(match, (list, OrderedDict)):
-        return _construct_path_to_position(match, pos, cur_path)
-
-    # we should have only primitive types now
-    assert match is None or isinstance(match, (str, bool, int, float)), (
-        "expected to reach a leaf node that must be a primitive type, "
-        + f"but got a '{type(match)}' instead"
-    )
-    # if we are in a YAML list of primitive types (i.e. the last list entry is
-    # the list index), then we will not be able to get the correct list index
-    # as ruamel.yaml does not store the positions of primitive types
-    if isinstance(cur_path[-1], int):
-        cur_path.pop()
-    return cur_path
-
-
 def construct_path_to_position(
-    document: Any, pos: Position
-) -> List[Union[str, int]]:
-    if not isinstance(document, OrderedDict) and not isinstance(
-        document, list
-    ):
-        # oops, we cannot do a thing with this
-        raise ValueError(
-            f"Expected an ordered dictionary or a list, but got a {type(document)}"
-        )
+    document: str, pos: Position
+) -> List[parser.AstNode]:
+    tree = parser.parse(document)
+    found_node = None
+    parser_pos = parser.Position(line=pos.line, col=pos.character)
 
-    return _construct_path_to_position(document, pos, []) or []
+    def visitor(node: parser.AstNode) -> bool:
+        if parser_pos >= node.start and parser_pos < node.end:
+            nonlocal found_node
+            found_node = node
+        return True
+
+    tree.visit(visitor)
+
+    if not found_node:
+        return []
+
+    context: List[parser.AstNode] = []
+    node: Optional[parser.AstNode] = found_node
+    while node:
+        context.insert(0, node)
+        node = node.parent
+    return context
 
 
 def position_to_index(text, line, column):

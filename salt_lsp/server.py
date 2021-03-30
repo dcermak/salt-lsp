@@ -3,6 +3,7 @@ Language Server Protocol implementation
 """
 
 from os.path import basename, join, exists
+from salt_lsp.parser import IncludesNode, RequisiteNode, StateParameterNode
 from typing import Any, Dict, List, Tuple, Optional
 from dataclasses import dataclass, field
 import re
@@ -290,16 +291,17 @@ def completions(
             ],
         )
 
-    file_contents = salt_srv.get_file_parsed_contents(params.text_document.uri)
-    if file_contents is None:
+    file = salt_srv.get_sls_file(params.text_document.uri)
+    if file is None or file.contents is None:
         # FIXME: load the file
         return None
 
-    path = utils.construct_path_to_position(file_contents, params.position)
+    path = utils.construct_path_to_position(file.contents, params.position)
     if (
-        path == ["include"]
+        path
+        and isinstance(path[-1], IncludesNode)
         or basename(params.text_document.uri) == "top.sls"
-        and len(path) == 2
+        and isinstance(path[-1], StateParameterNode)
     ):
         file_path = utils.FileUri(params.text_document.uri).path
         includes = utils.get_sls_includes(file_path)
@@ -317,11 +319,12 @@ def goto_definition(
     salt_srv: SaltServer, params: types.DeclarationParams
 ) -> Optional[types.Location]:
     uri = params.text_document.uri
+    file = salt_srv.get_sls_file(uri)
     parsed_contents = salt_srv.get_file_parsed_contents(uri)
-    if parsed_contents is None:
+    if file is None or file.contents is None or parsed_contents is None:
         return None
-    path = utils.construct_path_to_position(parsed_contents, params.position)
-    if "require" not in path:
+    path = utils.construct_path_to_position(file.contents, params.position)
+    if any([isinstance(segment, RequisiteNode) for segment in path]):
         return None
 
     # "walk the path" -> elem will contain the entry under the cursor
