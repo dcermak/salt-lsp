@@ -569,17 +569,6 @@ class Parser:
             if isinstance(self._breadcrumbs[-1], RequisiteNode):
                 self._breadcrumbs[-1].reference = token.value
 
-        print(token)
-        print("  breadcrumbs: ", end="")
-        print([b.__class__.__name__ for b in self._breadcrumbs])
-        print("  block starts: ", end="")
-        print(
-            [
-                b[0].__class__.__name__ + "->" + b[1].__class__.__name__
-                for b in self._block_starts
-            ]
-        )
-
     def parse(self) -> Tree:
         """
         Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS file.
