@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 import yaml
 from os.path import abspath, dirname, exists, join
-from typing import Any, Callable, List, Mapping, Optional
+from typing import Any, Callable, List, Mapping, Optional, Tuple, Union
 
 
 @dataclass
@@ -415,7 +415,15 @@ class Parser:
         """
         self.document = document
         self._tree = Tree()
-        self._breadcrumbs: List[AstNode] = [self._tree]
+        self._breadcrumbs: List[AstNode] = []
+        self._block_starts: List[
+            Tuple[
+                Union[
+                    yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken
+                ]
+            ],
+            AstNode,
+        ] = []
         self._next_scalar_as_key = False
         self._unprocessed_tokens: Optional[List[TokenNode]] = None
         self._last_start: Optional[Position] = None
@@ -434,17 +442,14 @@ class Parser:
             )
 
         if isinstance(token, yaml.BlockMappingStartToken):
-            if isinstance(
-                self._breadcrumbs[-1], AstMapNode
-            ) and not isinstance(self._breadcrumbs[-1], RequisiteNode):
-                self._breadcrumbs.append(self._breadcrumbs[-1].add())
-                if self._last_start:
-                    self._breadcrumbs[-1].start = self._last_start
-                    self._last_start = None
-                else:
-                    self._breadcrumbs[-1].start = Position(
-                        line=token.start_mark.line, col=token.start_mark.column
-                    )
+            if not self._breadcrumbs:
+                self._breadcrumbs = [self._tree]
+
+        if isinstance(
+            token, (yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken)
+        ):
+            # Store which block start corresponds to what breadcrumb to help handling end block tokens
+            self._block_starts.append([token, self._breadcrumbs[-1]])
 
         if isinstance(token, yaml.ValueToken) and isinstance(
             self._breadcrumbs[-1], StateParameterNode
@@ -470,7 +475,17 @@ class Parser:
                 self._breadcrumbs.append(self._unprocessed_tokens[-1])
 
         if isinstance(token, yaml.BlockEndToken):
+            self._block_starts.pop()
             last = self._breadcrumbs.pop()
+            # TODO pop breadcrumbs until we match the block starts
+            while (
+                len(self._breadcrumbs) > 0
+                and self._breadcrumbs[-1] != self._block_starts[-1][1]
+            ):
+                closed = self._breadcrumbs.pop()
+                closed.end = Position(
+                    line=token.end_mark.line, col=token.end_mark.column
+                )
             if not isinstance(last, TokenNode):
                 last.end = Position(
                     line=token.end_mark.line, col=token.end_mark.column
@@ -495,19 +510,26 @@ class Parser:
 
         if isinstance(token, yaml.KeyToken):
             self._next_scalar_as_key = True
+            if isinstance(
+                self._breadcrumbs[-1], AstMapNode
+            ) and not isinstance(
+                self._breadcrumbs[-1], (RequisiteNode, StateParameterNode)
+            ):
+                self._breadcrumbs.append(self._breadcrumbs[-1].add())
+                if self._last_start:
+                    self._breadcrumbs[-1].start = self._last_start
+                    self._last_start = None
+                else:
+                    self._breadcrumbs[-1].start = Position(
+                        line=token.start_mark.line, col=token.start_mark.column
+                    )
 
         if isinstance(token, yaml.BlockEntryToken):
             # Store the token for the parameter and requisite start position since those are dicts in lists
-            if isinstance(self._breadcrumbs[-1], StateCallNode):
-                self._last_start = Position(
-                    line=token.start_mark.line, col=token.start_mark.column
-                )
-            if isinstance(self._breadcrumbs[-1], IncludesNode):
-                self._breadcrumbs.append(self._breadcrumbs[-1].add())
-                self._breadcrumbs[-1].start = Position(
-                    line=token.start_mark.line, col=token.start_mark.column
-                )
-            if isinstance(self._breadcrumbs[-1], RequisitesNode):
+            if isinstance(
+                self._breadcrumbs[-1],
+                (StateCallNode, IncludesNode, RequisitesNode),
+            ):
                 self._breadcrumbs.append(self._breadcrumbs[-1].add())
                 self._breadcrumbs[-1].start = Position(
                     line=token.start_mark.line, col=token.start_mark.column
@@ -524,8 +546,13 @@ class Parser:
                 # that means that the node had to be converted and we need to
                 # update the breadcrumbs too.
                 if changed != self._breadcrumbs[-1]:
-                    self._breadcrumbs.pop()
+                    old = self._breadcrumbs.pop()
                     self._breadcrumbs.append(changed)
+                    self._block_starts = [
+                        (block[0], changed) if block[1] == old else block
+                        for block in self._block_starts
+                    ]
+
                 self._next_scalar_as_key = False
             if isinstance(self._breadcrumbs[-1], IncludeNode):
                 self._breadcrumbs[-1].value = token.value
@@ -535,6 +562,17 @@ class Parser:
                 self._breadcrumbs.pop()
             if isinstance(self._breadcrumbs[-1], RequisiteNode):
                 self._breadcrumbs[-1].reference = token.value
+
+        print(token)
+        print("  breadcrumbs: ", end="")
+        print([b.__class__.__name__ for b in self._breadcrumbs])
+        print("  block starts: ", end="")
+        print(
+            [
+                b[0].__class__.__name__ + "->" + b[1].__class__.__name__
+                for b in self._block_starts
+            ]
+        )
 
     def parse(self) -> Tree:
         """

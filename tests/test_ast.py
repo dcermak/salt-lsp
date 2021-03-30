@@ -406,20 +406,24 @@ def test_empty_requisite_item():
     - require:
       - file: /foo/bar
       - 
+
+git -C /srv/salt pull -q:
+  cron.present:
+    - user: root
 """
     tree = parse(content)
     assert tree == Tree(
         start=Position(line=0, col=0),
-        end=Position(line=7, col=0),
+        end=Position(line=11, col=0),
         states=[
             StateNode(
                 start=Position(line=0, col=0),
-                end=Position(line=7, col=0),
+                end=Position(line=8, col=0),
                 identifier="/etc/systemd/system/rootco-salt-backup.service",
                 states=[
                     StateCallNode(
                         start=Position(line=1, col=2),
-                        end=Position(line=7, col=0),
+                        end=Position(line=8, col=0),
                         name="file.managed",
                         parameters=[
                             StateParameterNode(
@@ -438,7 +442,7 @@ def test_empty_requisite_item():
                         requisites=[
                             RequisitesNode(
                                 start=Position(line=4, col=4),
-                                end=Position(line=7, col=0),
+                                end=Position(line=8, col=0),
                                 kind="require",
                                 requisites=[
                                     RequisiteNode(
@@ -449,7 +453,7 @@ def test_empty_requisite_item():
                                     ),
                                     RequisiteNode(
                                         start=Position(line=6, col=6),
-                                        end=Position(line=7, col=0),
+                                        end=Position(line=8, col=0),
                                         module=None,
                                         reference=None,
                                     ),
@@ -458,7 +462,27 @@ def test_empty_requisite_item():
                         ],
                     )
                 ],
-            )
+            ),
+            StateNode(
+                start=Position(line=8, col=0),
+                end=Position(line=11, col=0),
+                identifier="git -C /srv/salt pull -q",
+                states=[
+                    StateCallNode(
+                        start=Position(line=9, col=2),
+                        end=Position(line=11, col=0),
+                        name="cron.present",
+                        parameters=[
+                            StateParameterNode(
+                                start=Position(line=10, col=4),
+                                end=Position(line=11, col=0),
+                                name="user",
+                                value="root",
+                            ),
+                        ],
+                    )
+                ],
+            ),
         ],
     )
 
