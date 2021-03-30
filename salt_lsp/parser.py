@@ -201,7 +201,7 @@ class RequisitesNode(AstMapNode):
         self.requisites.append(RequisiteNode(parent=self))
         return self.requisites[-1]
 
-    def get_children(self: AstMapNode) -> List[AstNode]:
+    def get_children(self: RequisitesNode) -> List[AstNode]:
         """
         Returns all the children nodes
         """
@@ -261,7 +261,7 @@ class StateCallNode(AstMapNode):
         self.requisites[-1].start = param.start
         return self.requisites[-1]
 
-    def get_children(self: AstMapNode) -> List[AstNode]:
+    def get_children(self: StateCallNode) -> List[AstNode]:
         """
         Returns all the children nodes
         """
@@ -305,7 +305,7 @@ class StateNode(AstMapNode):
         self.identifier = key
         return self
 
-    def get_children(self: AstMapNode) -> List[AstNode]:
+    def get_children(self: StateNode) -> List[AstNode]:
         """
         Returns all the children nodes
         """
@@ -329,7 +329,7 @@ class ExtendNode(AstMapNode):
         self.states.append(StateNode(parent=self))
         return self.states[-1]
 
-    def get_children(self: AstMapNode) -> List[AstNode]:
+    def get_children(self: ExtendNode) -> List[AstNode]:
         """
         Returns all the children nodes
         """
@@ -368,7 +368,7 @@ class Tree(AstMapNode):
             self.extend.start = state.start
             return self.extend
 
-    def get_children(self: AstMapNode) -> List[AstNode]:
+    def get_children(self: Tree) -> List[AstNode]:
         """
         Returns all the children nodes
         """
