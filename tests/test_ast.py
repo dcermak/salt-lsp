@@ -569,6 +569,89 @@ def test_empty_last_parameter():
     )
 
 
+def test_top_sls():
+    content = """base:
+  '*':
+    - common
+    - ca
+"""
+    tree = parse(content)
+    assert tree == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=4, col=0),
+        states=[
+            StateNode(
+                start=Position(line=0, col=0),
+                end=Position(line=4, col=0),
+                identifier="base",
+                states=[
+                    StateCallNode(
+                        start=Position(line=1, col=2),
+                        end=Position(line=4, col=0),
+                        name="*",
+                        parameters=[
+                            StateParameterNode(
+                                start=Position(line=2, col=4),
+                                end=Position(line=3, col=4),
+                                name="common",
+                                value=None,
+                            ),
+                            StateParameterNode(
+                                start=Position(line=3, col=4),
+                                end=Position(line=4, col=0),
+                                name="ca",
+                                value=None,
+                            ),
+                        ],
+                    )
+                ],
+            )
+        ],
+    )
+
+
+def test_state_no_param():
+    content = """jdoe:
+  user.present
+"""
+    tree = parse(content)
+    assert tree == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=2, col=0),
+        states=[
+            StateNode(
+                start=Position(line=0, col=0),
+                end=Position(line=2, col=0),
+                identifier="jdoe",
+                states=[
+                    StateCallNode(
+                        start=Position(line=1, col=2),
+                        end=Position(line=1, col=14),
+                        name="user.present",
+                    )
+                ],
+            )
+        ],
+    )
+
+
+def test_state_unfinished_state_id():
+    content = """jdoe
+"""
+    tree = parse(content)
+    assert tree == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=1, col=0),
+        states=[
+            StateNode(
+                start=Position(line=0, col=0),
+                end=Position(line=0, col=4),
+                identifier="jdoe",
+            )
+        ],
+    )
+
+
 def test_visit():
     content = """/etc/systemd/system/rootco-salt-backup.service:
   file.managed:

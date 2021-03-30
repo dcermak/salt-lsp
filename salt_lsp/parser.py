@@ -422,7 +422,7 @@ class Parser:
         """
         self.document = document
         self._tree = Tree()
-        self._breadcrumbs: List[AstNode] = []
+        self._breadcrumbs: List[AstNode] = [self._tree]
         self._block_starts: List[
             Tuple[
                 Union[
@@ -449,10 +449,6 @@ class Parser:
             self._tree.start = token_start
         if isinstance(token, yaml.StreamEndToken):
             self._tree.end = token_end
-
-        if isinstance(token, yaml.BlockMappingStartToken):
-            if not self._breadcrumbs:
-                self._breadcrumbs = [self._tree]
 
         if isinstance(
             token, (yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken)
@@ -484,13 +480,11 @@ class Parser:
                 self._breadcrumbs.append(self._unprocessed_tokens[-1])
 
         if isinstance(token, yaml.BlockEndToken):
-            self._block_starts.pop()
+            last_start = self._block_starts.pop()
             last = self._breadcrumbs.pop()
-            # TODO pop breadcrumbs until we match the block starts
-            while (
-                len(self._breadcrumbs) > 0
-                and self._breadcrumbs[-1] != self._block_starts[-1][1]
-            ):
+            # pop breadcrumbs until we match the block starts
+            closed = last
+            while len(self._breadcrumbs) > 0 and closed != last_start[1]:
                 closed = self._breadcrumbs.pop()
                 closed.end = token_end
             if not isinstance(last, TokenNode):
@@ -562,12 +556,25 @@ class Parser:
                     ]
 
                 self._next_scalar_as_key = False
-            if isinstance(self._breadcrumbs[-1], IncludeNode):
-                self._breadcrumbs[-1].value = token.value
-                self._breadcrumbs[-1].end = token_end
-                self._breadcrumbs.pop()
-            if isinstance(self._breadcrumbs[-1], RequisiteNode):
-                self._breadcrumbs[-1].reference = token.value
+            else:
+                if isinstance(self._breadcrumbs[-1], IncludeNode):
+                    self._breadcrumbs[-1].value = token.value
+                    self._breadcrumbs[-1].end = token_end
+                    self._breadcrumbs.pop()
+                if isinstance(self._breadcrumbs[-1], RequisiteNode):
+                    self._breadcrumbs[-1].reference = token.value
+                # If the user hasn't typed the ':' yet, then the state parameter will come as a scalar
+                if (
+                    isinstance(self._breadcrumbs[-1], StateParameterNode)
+                    and self._breadcrumbs[-1].name is None
+                ):
+                    self._breadcrumbs[-1].name = token.value
+                if isinstance(self._breadcrumbs[-1], (StateNode, Tree)):
+                    new_node = self._breadcrumbs[-1].add()
+                    new_node.start = token_start
+                    new_node.end = token_end
+                    if getattr(new_node, "set_key"):
+                        getattr(new_node, "set_key")(token.value)
 
     def parse(self) -> Tree:
         """
