@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 import yaml
 from os.path import abspath, dirname, exists, join
-from typing import Any, Callable, List, Mapping, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 
 @dataclass
@@ -74,7 +74,7 @@ class AstMapNode(AstNode, ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def get_children(self: AstMapNode) -> List[AstNode]:
+    def get_children(self: AstMapNode) -> Sequence[AstNode]:
         """
         Returns all the children nodes
         """
@@ -201,7 +201,7 @@ class RequisitesNode(AstMapNode):
         self.requisites.append(RequisiteNode(parent=self))
         return self.requisites[-1]
 
-    def get_children(self: RequisitesNode) -> List[AstNode]:
+    def get_children(self: RequisitesNode) -> Sequence[AstNode]:
         """
         Returns all the children nodes
         """
@@ -261,7 +261,7 @@ class StateCallNode(AstMapNode):
         self.requisites[-1].start = param.start
         return self.requisites[-1]
 
-    def get_children(self: StateCallNode) -> List[AstNode]:
+    def get_children(self: StateCallNode) -> Sequence[AstNode]:
         """
         Returns all the children nodes
         """
@@ -305,7 +305,7 @@ class StateNode(AstMapNode):
         self.identifier = key
         return self
 
-    def get_children(self: StateNode) -> List[AstNode]:
+    def get_children(self: StateNode) -> Sequence[AstNode]:
         """
         Returns all the children nodes
         """
@@ -329,7 +329,7 @@ class ExtendNode(AstMapNode):
         self.states.append(StateNode(parent=self))
         return self.states[-1]
 
-    def get_children(self: ExtendNode) -> List[AstNode]:
+    def get_children(self: ExtendNode) -> Sequence[AstNode]:
         """
         Returns all the children nodes
         """
@@ -367,8 +367,9 @@ class Tree(AstMapNode):
             self.extend = ExtendNode(parent=self)
             self.extend.start = state.start
             return self.extend
+        return self
 
-    def get_children(self: Tree) -> List[AstNode]:
+    def get_children(self: Tree) -> Sequence[AstNode]:
         """
         Returns all the children nodes
         """
@@ -420,9 +421,9 @@ class Parser:
             Tuple[
                 Union[
                     yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken
-                ]
+                ],
+                AstNode,
             ],
-            AstNode,
         ] = []
         self._next_scalar_as_key = False
         self._unprocessed_tokens: Optional[List[TokenNode]] = None
@@ -451,7 +452,7 @@ class Parser:
             token, (yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken)
         ):
             # Store which block start corresponds to what breadcrumb to help handling end block tokens
-            self._block_starts.append([token, self._breadcrumbs[-1]])
+            self._block_starts.append((token, self._breadcrumbs[-1]))
 
         if isinstance(token, yaml.ValueToken) and isinstance(
             self._breadcrumbs[-1], StateParameterNode
@@ -524,6 +525,7 @@ class Parser:
             # Create the state parameter, include and requisite before the dict since those are dicts in lists
             same_level = (
                 len(self._breadcrumbs) > 0
+                and self._breadcrumbs[-1].start
                 and self._breadcrumbs[-1].start.col == token.start_mark.column
             )
             if same_level:
