@@ -76,6 +76,7 @@ def test_path_to_pkgs_list():
         assert isinstance(path[3], StateParameterNode)
         assert path[3].name == "pkgs"
 
+
 def test_path_to_require():
     path = construct_path_to_position(
         MASTER_DOT_SLS, Position(line=8, character=7)
@@ -89,6 +90,7 @@ def test_path_to_require():
     assert isinstance(path[3], RequisitesNode)
     assert path[3].kind == "require"
     assert isinstance(path[4], RequisiteNode)
+
 
 def test_path_to_dummy():
     path = construct_path_to_position(
@@ -104,6 +106,7 @@ def test_path_to_dummy():
     assert isinstance(path[3], StateParameterNode)
     assert path[3].name == "dummy"
 
+
 def test_path_after_dummy():
     path = construct_path_to_position(
         MASTER_DOT_SLS, Position(line=15, character=5)
@@ -117,6 +120,7 @@ def test_path_after_dummy():
     assert path[2].name == "cron.present"
     assert isinstance(path[3], StateParameterNode)
     assert path[3].name == "dummy"
+
 
 def test_path_before_target():
     path = construct_path_to_position(
