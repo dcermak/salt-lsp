@@ -610,7 +610,10 @@ class Parser:
                                 end_mark=err.context_mark,
                             )
                         )
-                    elif node.start and err.context_mark.column == node.start.col:
+                    elif (
+                        node.start
+                        and err.context_mark.column == node.start.col
+                    ):
                         self._process_token(
                             BlockEndToken(
                                 start_mark=err.context_mark,
