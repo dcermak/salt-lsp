@@ -10,6 +10,8 @@ from os.path import abspath, dirname, exists, join
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
 import logging
 
+from yaml.tokens import BlockEndToken, ScalarToken
+
 
 log = logging.getLogger(__name__)
 
@@ -580,8 +582,6 @@ class Parser:
                     if getattr(new_node, "set_key"):
                         getattr(new_node, "set_key")(token.value)
 
-        log.debug(token)
-
     def parse(self) -> Tree:
         """
         Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS file.
@@ -594,13 +594,45 @@ class Parser:
         token = None
         try:
             for token in tokens:
+                log.debug(token)
+                print(token)
                 self._process_token(token)
         except yaml.scanner.ScannerError as err:
+            print(err)
             log.debug(err)
-            for node in self._breadcrumbs:
-                node.end = Position(
-                    line=token.end_mark.line, col=token.end_mark.column
-                )
+            if token:
+                # Properly close the opened blocks
+                for node in reversed(self._breadcrumbs):
+                    if err.context_mark.column < node.start.col:
+                        self._process_token(
+                            BlockEndToken(
+                                start_mark=err.context_mark,
+                                end_mark=err.context_mark,
+                            )
+                        )
+                    elif err.context_mark.column == node.start.col:
+                        self._process_token(
+                            BlockEndToken(
+                                start_mark=err.context_mark,
+                                end_mark=err.context_mark,
+                            )
+                        )
+                        value = self.document[
+                            err.context_mark.index : err.problem_mark.index
+                        ].strip("\r\n")
+                        error_token = ScalarToken(
+                            value=value,
+                            start_mark=err.context_mark,
+                            end_mark=err.problem_mark,
+                            plain=True,
+                            style=None,
+                        )
+                        self._process_token(error_token)
+                    else:
+                        node.end = Position(
+                            line=err.problem_mark.line,
+                            col=err.problem_mark.column,
+                        )
             return self._tree
         return self._tree
 

@@ -652,6 +652,53 @@ def test_state_unfinished_state_id():
     )
 
 
+def test_scan_error():
+    content = """/etc/systemd/system/rootco-salt-backup.service:
+  file.managed:
+    - user: root
+    - group: root
+  virt
+"""
+    tree = parse(content)
+    assert tree == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=5, col=0),
+        states=[
+            StateNode(
+                start=Position(line=0, col=0),
+                end=Position(line=5, col=0),
+                identifier="/etc/systemd/system/rootco-salt-backup.service",
+                states=[
+                    StateCallNode(
+                        start=Position(line=1, col=2),
+                        end=Position(line=4, col=2),
+                        name="file.managed",
+                        parameters=[
+                            StateParameterNode(
+                                start=Position(line=2, col=4),
+                                end=Position(line=3, col=4),
+                                name="user",
+                                value="root",
+                            ),
+                            StateParameterNode(
+                                start=Position(line=3, col=4),
+                                end=Position(line=4, col=2),
+                                name="group",
+                                value="root",
+                            ),
+                        ],
+                    ),
+                    StateCallNode(
+                        start=Position(line=4, col=2),
+                        end=Position(line=5, col=0),
+                        name="virt",
+                    ),
+                ],
+            )
+        ],
+    )
+
+
 def test_visit():
     content = """/etc/systemd/system/rootco-salt-backup.service:
   file.managed:
