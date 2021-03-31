@@ -2,34 +2,32 @@
 Language Server Protocol implementation
 """
 
-from os.path import basename, join, exists
-from salt_lsp.parser import IncludesNode, RequisiteNode, StateParameterNode
-from typing import Any, Dict, List, Tuple, Optional
-from dataclasses import dataclass, field
-import re
 import logging
+import re
+from dataclasses import dataclass, field
+from os.path import basename, exists, join
+from typing import Any, Dict, List, Optional, Tuple
 
-from ruamel import yaml
-from pygls.server import LanguageServer
-from pygls.capabilities import (
-    COMPLETION,
-)
+from pygls.capabilities import COMPLETION
+from pygls.lsp import types
 from pygls.lsp.methods import (
+    DEFINITION,
     TEXT_DOCUMENT_DID_CHANGE,
     TEXT_DOCUMENT_DID_CLOSE,
     TEXT_DOCUMENT_DID_OPEN,
-    DEFINITION,
 )
 from pygls.lsp.types import (
     CompletionItem,
     CompletionList,
-    CompletionParams,
     CompletionOptions,
+    CompletionParams,
 )
-from pygls.lsp import types
+from pygls.server import LanguageServer
+from ruamel import yaml
 
 import salt_lsp.utils as utils
 from salt_lsp.base_types import StateNameCompletion
+from salt_lsp.parser import IncludesNode, RequisiteNode, StateParameterNode
 
 
 @dataclass(init=False)

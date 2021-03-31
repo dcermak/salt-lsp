@@ -2,18 +2,16 @@
 Utility functions to extract data from the files
 """
 
-from collections import OrderedDict
 import os
 import os.path
-import subprocess
 import shlex
+import subprocess
+from typing import Iterator, List, Optional, TypeVar
 from urllib.parse import urlparse
-from typing import Any, Iterator, Union, Optional, List, TypeVar
+
+from pygls.lsp.types import Position
 
 import salt_lsp.parser as parser
-from pygls.lsp.types import (
-    Position,
-)
 
 
 def get_git_root(path: str) -> str:

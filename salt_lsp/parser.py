@@ -3,15 +3,14 @@ Module defining and building an AST from the SLS file.
 """
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-import yaml
 from os.path import abspath, dirname, exists, join
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
-import logging
 
+import yaml
 from yaml.tokens import BlockEndToken, ScalarToken
-
 
 log = logging.getLogger(__name__)
 
@@ -97,6 +96,10 @@ class AstMapNode(AstNode, ABC):
 
 @dataclass
 class IncludeNode(AstNode):
+    """
+    Represents an item in the includes node
+    """
+
     value: Optional[str] = None
 
     def get_file(self: IncludeNode, top_path: str) -> Optional[str]:
@@ -129,6 +132,9 @@ class IncludesNode(AstNode):
     includes: List[IncludeNode] = field(default_factory=list)
 
     def add(self: IncludesNode) -> IncludeNode:
+        """
+        Add a child node and return it.
+        """
         self.includes.append(IncludeNode())
         return self.includes[-1]
 
@@ -181,6 +187,12 @@ class RequisiteNode(AstNode):
     reference: Optional[str] = None
 
     def set_key(self: RequisiteNode, key: str) -> AstNode:
+        """
+        Set the module of the requisite
+
+        :param key: the module to set
+        :return: the node that was updated
+        """
         self.module = key
         return self
 
@@ -195,6 +207,12 @@ class RequisitesNode(AstMapNode):
     requisites: List[RequisiteNode] = field(default_factory=list)
 
     def set_key(self: RequisitesNode, key: str) -> AstNode:
+        """
+        Set the kind of the requisite
+
+        :param key: the kind to set
+        :return: the node that was updated
+        """
         self.kind = key
         return self
 
@@ -364,6 +382,14 @@ class Tree(AstMapNode):
         return self.states[-1]
 
     def convert(self: Tree, state: StateNode, name: str) -> AstNode:
+        """
+        Convert a child state node into the proper node type depending on the name.
+
+        :param state: the state node to change
+        :param name: the name of the state node
+
+        :return: the state node if no change was needed or the newly created node
+        """
         self.states.remove(state)
 
         if name == "include":
@@ -393,6 +419,10 @@ class Tree(AstMapNode):
 
 @dataclass(init=False, eq=False)
 class TokenNode(AstNode):
+    """
+    Wrapper node for unprocessed yaml tokens
+    """
+
     token: yaml.Token = field(default_factory=lambda: yaml.Token(0, 0))
 
     def __init__(self: TokenNode, token: yaml.Token) -> None:
@@ -405,8 +435,8 @@ class TokenNode(AstNode):
         self.token = token
 
     def __eq__(self, other):
-        if not isinstance(other, TokenNode) or type(self.token) != type(
-            other.token
+        if not isinstance(other, TokenNode) or not isinstance(
+            self.token, type(other.token)
         ):
             return False
 
@@ -459,7 +489,8 @@ class Parser:
         if isinstance(
             token, (yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken)
         ):
-            # Store which block start corresponds to what breadcrumb to help handling end block tokens
+            # Store which block start corresponds to what breadcrumb to help
+            # handling end block tokens
             self._block_starts.append((token, self._breadcrumbs[-1]))
 
         if isinstance(token, yaml.ValueToken) and isinstance(
@@ -510,7 +541,8 @@ class Parser:
                 self._unprocessed_tokens = None
 
         if self._unprocessed_tokens is not None:
-            # If self._unprocessed_tokens is set then we don't have Salt-specific data token to process
+            # If self._unprocessed_tokens is set then we don't have
+            # Salt-specific data token to process
             return
 
         if isinstance(token, yaml.KeyToken):
@@ -528,7 +560,8 @@ class Parser:
                     self._breadcrumbs[-1].start = token_start
 
         if isinstance(token, yaml.BlockEntryToken):
-            # Create the state parameter, include and requisite before the dict since those are dicts in lists
+            # Create the state parameter, include and requisite before the dict
+            # since those are dicts in lists
             same_level = (
                 len(self._breadcrumbs) > 0
                 and self._breadcrumbs[-1].start
@@ -569,7 +602,8 @@ class Parser:
                     self._breadcrumbs.pop()
                 if isinstance(self._breadcrumbs[-1], RequisiteNode):
                     self._breadcrumbs[-1].reference = token.value
-                # If the user hasn't typed the ':' yet, then the state parameter will come as a scalar
+                # If the user hasn't typed the ':' yet, then the state
+                # parameter will come as a scalar
                 if (
                     isinstance(self._breadcrumbs[-1], StateParameterNode)
                     and self._breadcrumbs[-1].name is None
