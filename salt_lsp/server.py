@@ -28,6 +28,7 @@ from ruamel import yaml
 
 import salt_lsp.utils as utils
 from salt_lsp.base_types import StateNameCompletion
+from salt_lsp.document_symbols import tree_to_document_symbols
 from salt_lsp.parser import (
     IncludesNode,
     RequisiteNode,
@@ -379,21 +380,7 @@ def document_symbol(
         return None
 
     tree = parse(sls_file.contents)
-    document_symbols: List[types.DocumentSymbol] = []
-
-    if tree.includes is not None:
-        document_symbols.append(
-            tree.includes.to_document_symbol(salt_srv._state_name_completions)
-        )
-
-    if tree.extend is not None:
-        document_symbols.append(
-            tree.extend.to_document_symbol(salt_srv._state_name_completions)
-        )
-
-    for state in tree.states:
-        document_symbols.append(
-            state.to_document_symbol(salt_srv._state_name_completions)
-        )
-
-    return document_symbols
+    doc_symbols = tree_to_document_symbols(
+        tree, salt_srv._state_name_completions
+    )
+    return doc_symbols
