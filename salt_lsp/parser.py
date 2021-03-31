@@ -603,14 +603,14 @@ class Parser:
             if token:
                 # Properly close the opened blocks
                 for node in reversed(self._breadcrumbs):
-                    if err.context_mark.column < node.start.col:
+                    if node.start and err.context_mark.column < node.start.col:
                         self._process_token(
                             BlockEndToken(
                                 start_mark=err.context_mark,
                                 end_mark=err.context_mark,
                             )
                         )
-                    elif err.context_mark.column == node.start.col:
+                    elif node.start and err.context_mark.column == node.start.col:
                         self._process_token(
                             BlockEndToken(
                                 start_mark=err.context_mark,
