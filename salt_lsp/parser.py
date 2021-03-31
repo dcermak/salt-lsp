@@ -8,6 +8,10 @@ from dataclasses import dataclass, field
 import yaml
 from os.path import abspath, dirname, exists, join
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
+import logging
+
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -576,6 +580,8 @@ class Parser:
                     if getattr(new_node, "set_key"):
                         getattr(new_node, "set_key")(token.value)
 
+        log.debug(token)
+
     def parse(self) -> Tree:
         """
         Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS file.
@@ -585,11 +591,16 @@ class Parser:
         """
 
         tokens = yaml.scan(self.document)
+        token = None
         try:
             for token in tokens:
                 self._process_token(token)
-        except yaml.scanner.ScannerError:
-            # TODO We may want to check if the error occurs at the searched position
+        except yaml.scanner.ScannerError as err:
+            log.debug(err)
+            for node in self._breadcrumbs:
+                node.end = Position(
+                    line=token.end_mark.line, col=token.end_mark.column
+                )
             return self._tree
         return self._tree
 
