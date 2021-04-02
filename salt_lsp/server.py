@@ -6,7 +6,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from os.path import basename, exists, join
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from pygls.capabilities import COMPLETION
 from pygls.lsp import types
@@ -322,16 +322,13 @@ def goto_definition(
     if file is None or file.contents is None or parsed_contents is None:
         return None
     path = utils.construct_path_to_position(file.contents, params.position)
-    if any([isinstance(segment, RequisiteNode) for segment in path]):
+
+    # Going to definition is only handled on requisites ids
+    if not isinstance(path[-1], RequisiteNode):
         return None
 
-    # "walk the path" -> elem will contain the entry under the cursor
-    id_to_find = parsed_contents
-    for entry_id in path:
-        id_to_find = id_to_find[entry_id]
-
-    # we can only complete string ids
-    if not isinstance(id_to_find, str):
+    id_to_find = cast(RequisiteNode, path[-1]).reference
+    if id_to_find is None:
         return None
 
     # we can be lucky and the id is actually defined in the same document
