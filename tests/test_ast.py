@@ -722,3 +722,74 @@ def test_visit():
         name="user",
         value="root",
     )
+
+
+def test_pop_breadcrumb_from_flow_sequence():
+    """
+    This is a regression test for https://github.com/dcermak/salt-lsp/issues/3
+    """
+    sls_file = """apache2:
+   pkg.installed: []
+   service.running:
+     - enable: true
+     - require:
+       - pkg: apache2
+   file.managed: {}
+"""
+    assert parse(sls_file) == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=7, col=0),
+        includes=None,
+        extend=None,
+        states=[
+            StateNode(
+                start=Position(line=0, col=0),
+                end=Position(line=7, col=0),
+                identifier="apache2",
+                states=[
+                    StateCallNode(
+                        start=Position(line=1, col=3),
+                        end=Position(line=1, col=20),
+                        name="pkg.installed",
+                        parameters=[],
+                        requisites=[],
+                    ),
+                    StateCallNode(
+                        start=Position(line=2, col=3),
+                        end=Position(line=6, col=3),
+                        name="service.running",
+                        parameters=[
+                            StateParameterNode(
+                                start=Position(line=3, col=5),
+                                end=Position(line=4, col=5),
+                                name="enable",
+                                value="true",
+                            )
+                        ],
+                        requisites=[
+                            RequisitesNode(
+                                start=Position(line=4, col=5),
+                                end=Position(line=6, col=3),
+                                kind="require",
+                                requisites=[
+                                    RequisiteNode(
+                                        start=Position(line=5, col=7),
+                                        end=Position(line=6, col=3),
+                                        module="pkg",
+                                        reference="apache2",
+                                    )
+                                ],
+                            )
+                        ],
+                    ),
+                    StateCallNode(
+                        start=Position(line=6, col=3),
+                        end=Position(line=6, col=19),
+                        name="file.managed",
+                        parameters=[],
+                        requisites=[],
+                    ),
+                ],
+            )
+        ],
+    )

@@ -462,7 +462,10 @@ class Parser:
         self._block_starts: List[
             Tuple[
                 Union[
-                    yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken
+                    yaml.BlockMappingStartToken,
+                    yaml.BlockSequenceStartToken,
+                    yaml.FlowSequenceStartToken,
+                    yaml.FlowMappingStartToken,
                 ],
                 AstNode,
             ],
@@ -487,7 +490,13 @@ class Parser:
             self._tree.end = token_end
 
         if isinstance(
-            token, (yaml.BlockMappingStartToken, yaml.BlockSequenceStartToken)
+            token,
+            (
+                yaml.BlockMappingStartToken,
+                yaml.BlockSequenceStartToken,
+                yaml.FlowSequenceStartToken,
+                yaml.FlowMappingStartToken,
+            ),
         ):
             # Store which block start corresponds to what breadcrumb to help
             # handling end block tokens
@@ -512,11 +521,30 @@ class Parser:
                 (
                     yaml.BlockMappingStartToken,
                     yaml.BlockSequenceStartToken,
+                    yaml.FlowSequenceStartToken,
+                    yaml.FlowMappingStartToken,
                 ),
             ):
                 self._breadcrumbs.append(self._unprocessed_tokens[-1])
 
-        if isinstance(token, yaml.BlockEndToken):
+        if isinstance(
+            token,
+            (
+                yaml.BlockEndToken,
+                yaml.FlowSequenceEndToken,
+                yaml.FlowMappingEndToken,
+            ),
+        ):
+            if len(self._block_starts) == 0 or len(self._breadcrumbs) == 0:
+                log.error(
+                    "Reached a %s but either no block starts "
+                    "(len(self._block_starts) = %d) or no breadcrumbs "
+                    "(len(self._breadcrumbs) = %d) are present",
+                    type(token).__name__,
+                    len(self._block_starts),
+                    len(self._breadcrumbs),
+                )
+                return
             last_start = self._block_starts.pop()
             last = self._breadcrumbs.pop()
             # pop breadcrumbs until we match the block starts
