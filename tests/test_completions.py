@@ -467,7 +467,9 @@ salt_server.post_init(FILE_NAME_COMPLETER)
 class TestStateNameCompletion:
     def test_complete_of_file(self):
         txt_doc = {
-            "text_document": SimpleNamespace(uri="foo.sls", text=TEST_FILE)
+            "text_document": SimpleNamespace(
+                uri="foo.sls", text=TEST_FILE, version=0
+            ),
         }
         salt_server.register_file(SimpleNamespace(**txt_doc))
 

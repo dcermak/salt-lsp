@@ -39,13 +39,30 @@ from salt_lsp.parser import (
 
 @dataclass(init=False)
 class SlsFile:
+    """
+    Representation of a ``.sls`` file.
+    """
+
+    #: The raw (= unparsed) contents of the sls file
     contents: str
+
+    #: Path to file on the file system
     path: str
+
+    #: The contents of this file parsed by ruamel
     parsed_contents: Optional[Any] = None
+
+    #: If true, then the file contents have been changed, but
+    #: :ref:`parsed_contents` has not been updated
     parsed_contents_stale: bool = True
 
     #: A list of URIs with the includes of this sls file
     includes: List[utils.Uri] = field(default_factory=list)
+
+    #: The current "version" of this file.
+    #: This is a counter that is incremented on each update of the file
+    #: contents.
+    version: int = 0
 
     @staticmethod
     def resolve_include(top_sls_dir: str, include_entry: str) -> Optional[str]:
@@ -58,7 +75,8 @@ class SlsFile:
             return entry_sls_path
         return None
 
-    def __init__(self, contents: str, uri: str) -> None:
+    def __init__(self, contents: str, uri: str, version: int = 0) -> None:
+        self.version = version
         self.contents = contents
         self.path = utils.FileUri(uri).path
         self.reparse()
@@ -157,11 +175,18 @@ class SaltServer(LanguageServer):
             self._files[params.text_document.uri] = SlsFile(
                 contents=params.text_document.text,
                 uri=params.text_document.uri,
+                version=max(0, int(params.text_document.version))
+                if params.text_document.version is not None
+                else 0,
             )
         else:
             self._files[
                 params.text_document.uri
             ].contents = params.text_document.text
+            if params.text_document.version is not None:
+                self._files[params.text_document.uri].version = max(
+                    0, int(params.text_document.version)
+                )
             self._files[params.text_document.uri].reparse()
 
         self.register_includes(params.text_document.uri)
