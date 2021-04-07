@@ -59,4 +59,4 @@ jobs:
       - name: run pylint
         run: |
           . .env3/bin/activate
-          python -m pylint --fail-under 8.9 salt_lsp/*py *py
+          python -m pylint --fail-under 9.2 salt_lsp/*py *py
