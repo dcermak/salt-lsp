@@ -9,8 +9,10 @@ from dataclasses import dataclass, field
 from os.path import abspath, dirname, exists, join
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
 
+from pygls.lsp import types
 import yaml
 from yaml.tokens import BlockEndToken, ScalarToken
+
 
 log = logging.getLogger(__name__)
 
@@ -48,9 +50,13 @@ class Position:
     def __ge__(self, other):
         return self > other or self == other
 
+    def to_lsp_pos(self) -> types.Position:
+        """Convert this position to pygls' native Position type."""
+        return types.Position(line=self.line, character=self.col)
+
 
 @dataclass
-class AstNode:
+class AstNode(ABC):
     """
     Base class for all nodes of the Abstract Syntax Tree
     """

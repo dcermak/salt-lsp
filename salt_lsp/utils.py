@@ -9,9 +9,10 @@ import subprocess
 from typing import Iterator, List, Optional, TypeVar
 from urllib.parse import urlparse
 
-from pygls.lsp.types import Position
+from pygls.lsp.types import Position, Range
 
 import salt_lsp.parser as parser
+from salt_lsp.parser import AstNode
 
 
 def get_git_root(path: str) -> str:
@@ -120,3 +121,14 @@ def is_valid_file_uri(uri: str) -> bool:
         return True
     except ValueError:
         return False
+
+
+def ast_node_to_range(node: AstNode) -> Optional[Range]:
+    """
+    Converts a AstNode to a Range spanning from the node's starts to its end.
+
+    If the node's start or end are None, then None is returned.
+    """
+    if node.start is None or node.end is None:
+        return None
+    return Range(start=node.start.to_lsp_pos(), end=node.end.to_lsp_pos())
