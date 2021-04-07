@@ -43,7 +43,9 @@ class SlsFile:
     path: str
     parsed_contents: Optional[Any] = None
     parsed_contents_stale: bool = True
-    includes: List[str] = field(default_factory=list)
+
+    #: A list of URIs with the includes of this sls file
+    includes: List[utils.Uri] = field(default_factory=list)
 
     @staticmethod
     def resolve_include(top_sls_dir: str, include_entry: str) -> Optional[str]:
@@ -70,7 +72,7 @@ class SlsFile:
                 and top_sls_location is not None
             ):
                 self.includes = list(
-                    f"file://{path}"
+                    utils.Uri(f"file://{path}")
                     for path in filter(
                         None,
                         (
