@@ -37,6 +37,9 @@ from salt_lsp.parser import (
 )
 
 
+SLS_LANGUAGE_ID = "sls"
+
+
 @dataclass(init=False)
 class SlsFile:
     """
@@ -390,9 +393,28 @@ def did_close(salt_srv: SaltServer, params: types.DidCloseTextDocumentParams):
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
-def did_open(salt_srv: SaltServer, params: types.DidOpenTextDocumentParams):
-    """Text document did open notification."""
+def did_open(
+    salt_srv: SaltServer, params: types.DidOpenTextDocumentParams
+) -> Optional[types.TextDocumentItem]:
+    """Text document did open notification.
+
+    This function registers the newly opened file with the salt server.
+    """
     salt_srv.register_file(params)
+    registered_file = salt_srv.get_sls_file(params.text_document.uri)
+    if registered_file is None:
+        salt_srv.logger.error(
+            "Could not retrieve the just registered file with the URI %s from "
+            "the server",
+            params.text_document.uri,
+        )
+        return None
+    return types.TextDocumentItem(
+        uri=params.text_document.uri,
+        language_id=SLS_LANGUAGE_ID,
+        text=params.text_document.text or "",
+        version=registered_file.version,
+    )
 
 
 @salt_server.feature(DOCUMENT_SYMBOL)
