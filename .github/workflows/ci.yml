@@ -27,6 +27,12 @@ jobs:
           . .env3/bin/activate
           python -m pytest -vv
 
+      - name: upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          fail_ci_if_error: false
+          flags: "unittests,python-${{ matrix.python-version }}"
+
       - name: generate the cached completion data and try to launch the server
         run: |
           . .env3/bin/activate
