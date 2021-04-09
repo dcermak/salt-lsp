@@ -80,7 +80,7 @@ def construct_path_to_position(
     return context
 
 
-def position_to_index(text, line, column):
+def position_to_index(text: str, line: int, column: int) -> int:
     split = text.splitlines(keepends=True)
     return sum([len(l) for i, l in enumerate(split) if i < line]) + column
 
