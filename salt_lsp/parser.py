@@ -481,6 +481,10 @@ class Parser:
             ],
         ] = []
         self._next_scalar_as_key = False
+        #: flag for _process_token that the preceding token was a ValueToken
+        #: => if applicable, the next token will be a value, unless a block is
+        #:    started
+        self._next_token_is_value = False
         self._unprocessed_tokens: Optional[List[TokenNode]] = None
         self._last_start: Optional[Position] = None
 
@@ -511,7 +515,12 @@ class Parser:
             # Store which block start corresponds to what breadcrumb to help
             # handling end block tokens
             self._block_starts.append((token, self._breadcrumbs[-1]))
+            # a block is starting, so the next token cannot be a value, it will
+            # be a complex type instead
+            self._next_token_is_value = False
 
+        if isinstance(token, yaml.ValueToken):
+            self._next_token_is_value = True
         if isinstance(token, yaml.ValueToken) and isinstance(
             self._breadcrumbs[-1], StateParameterNode
         ):
@@ -536,6 +545,9 @@ class Parser:
                 ),
             ):
                 self._breadcrumbs.append(self._unprocessed_tokens[-1])
+                # a block is starting, so the next token cannot be a value, it
+                # will be a complex type instead
+                self._next_token_is_value = False
 
         if isinstance(
             token,
@@ -581,6 +593,10 @@ class Parser:
         if self._unprocessed_tokens is not None:
             # If self._unprocessed_tokens is set then we don't have
             # Salt-specific data token to process
+            # reset the flag that the next token is a value, as the current
+            # token has now been put into self._unprocessed_tokens and will be
+            # taken care of in the next sweep
+            self._next_token_is_value = False
             return
 
         if isinstance(token, yaml.KeyToken):
@@ -653,6 +669,16 @@ class Parser:
                     new_node.end = token_end
                     if getattr(new_node, "set_key"):
                         getattr(new_node, "set_key")(token.value)
+
+                    # this scalar token is actually the plain value of the
+                    # previous key and "a new thing" starts with the next token
+                    # => pop the current breadcrumb as it is now processed
+                    if self._next_token_is_value:
+                        last = self._breadcrumbs.pop()
+                        if last.end is None:
+                            last.end = token_end
+
+            self._next_token_is_value = False
 
     def parse(self) -> Tree:
         """
