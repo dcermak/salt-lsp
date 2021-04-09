@@ -663,10 +663,8 @@ class Parser:
         try:
             for token in tokens:
                 log.debug(token)
-                print(token)
                 self._process_token(token)
         except yaml.scanner.ScannerError as err:
-            print(err)
             log.debug(err)
             if token:
                 # Properly close the opened blocks
