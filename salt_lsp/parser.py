@@ -67,7 +67,8 @@ class AstNode(ABC):
 
     def visit(self: AstNode, visitor: Callable[[AstNode], bool]) -> None:
         """
-        Apply a visitor function to the node and apply it on children if the function returns True.
+        Apply a visitor function to the node and apply it on children if the
+        function returns True.
         """
         visitor(self)
 
@@ -93,7 +94,8 @@ class AstMapNode(AstNode, ABC):
 
     def visit(self, visitor: Callable[[AstNode], bool]) -> None:
         """
-        Apply a visitor function to the node and apply it on children if the function returns True.
+        Apply a visitor function to the node and apply it on children if the
+        function returns True.
         """
         if visitor(self):
             for child in self.get_children():
@@ -156,8 +158,8 @@ class StateParameterNode(AstNode):
 
     def set_key(self: StateParameterNode, key: str) -> AstNode:
         """
-        Set the name of the parameter. If getting a requisites, tell the parent to handle it
-        and return the newly created node.
+        Set the name of the parameter. If getting a requisites, tell the parent
+        to handle it and return the newly created node.
 
         :return: the node that finally got the name
         """
@@ -327,8 +329,8 @@ class StateNode(AstMapNode):
 
     def set_key(self: StateNode, key: str) -> AstNode:
         """
-        Set the identifier of the node. If the ikey is one of include or extend,
-        tell the parent to handle it.
+        Set the identifier of the node. If the ikey is one of include or
+        extend, tell the parent to handle it.
 
         :return: the node where the key has been set.
         """
@@ -389,12 +391,14 @@ class Tree(AstMapNode):
 
     def convert(self: Tree, state: StateNode, name: str) -> AstNode:
         """
-        Convert a child state node into the proper node type depending on the name.
+        Convert a child state node into the proper node type depending on the
+        name.
 
         :param state: the state node to change
         :param name: the name of the state node
 
-        :return: the state node if no change was needed or the newly created node
+        :return: the state node if no change was needed or the newly created
+            node
         """
         self.states.remove(state)
 
@@ -617,9 +621,9 @@ class Parser:
                 changed = getattr(self._breadcrumbs[-1], "set_key")(
                     token.value
                 )
-                # If the changed node isn't the same than the one we called the function on,
-                # that means that the node had to be converted and we need to
-                # update the breadcrumbs too.
+                # If the changed node isn't the same than the one we called the
+                # function on, that means that the node had to be converted and
+                # we need to update the breadcrumbs too.
                 if changed != self._breadcrumbs[-1]:
                     old = self._breadcrumbs.pop()
                     self._breadcrumbs.append(changed)
@@ -652,7 +656,8 @@ class Parser:
 
     def parse(self) -> Tree:
         """
-        Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS file.
+        Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS
+        file.
 
         :return: the generated AST
         :raises ValueException: for any other renderer but ``jinja|yaml``
