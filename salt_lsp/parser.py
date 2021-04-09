@@ -67,7 +67,8 @@ class AstNode(ABC):
 
     def visit(self: AstNode, visitor: Callable[[AstNode], bool]) -> None:
         """
-        Apply a visitor function to the node and apply it on children if the function returns True.
+        Apply a visitor function to the node and apply it on children if the
+        function returns True.
         """
         visitor(self)
 
@@ -93,7 +94,8 @@ class AstMapNode(AstNode, ABC):
 
     def visit(self, visitor: Callable[[AstNode], bool]) -> None:
         """
-        Apply a visitor function to the node and apply it on children if the function returns True.
+        Apply a visitor function to the node and apply it on children if the
+        function returns True.
         """
         if visitor(self):
             for child in self.get_children():
@@ -156,8 +158,8 @@ class StateParameterNode(AstNode):
 
     def set_key(self: StateParameterNode, key: str) -> AstNode:
         """
-        Set the name of the parameter. If getting a requisites, tell the parent to handle it
-        and return the newly created node.
+        Set the name of the parameter. If getting a requisites, tell the parent
+        to handle it and return the newly created node.
 
         :return: the node that finally got the name
         """
@@ -327,8 +329,8 @@ class StateNode(AstMapNode):
 
     def set_key(self: StateNode, key: str) -> AstNode:
         """
-        Set the identifier of the node. If the ikey is one of include or extend,
-        tell the parent to handle it.
+        Set the identifier of the node. If the ikey is one of include or
+        extend, tell the parent to handle it.
 
         :return: the node where the key has been set.
         """
@@ -389,12 +391,14 @@ class Tree(AstMapNode):
 
     def convert(self: Tree, state: StateNode, name: str) -> AstNode:
         """
-        Convert a child state node into the proper node type depending on the name.
+        Convert a child state node into the proper node type depending on the
+        name.
 
         :param state: the state node to change
         :param name: the name of the state node
 
-        :return: the state node if no change was needed or the newly created node
+        :return: the state node if no change was needed or the newly created
+            node
         """
         self.states.remove(state)
 
@@ -477,6 +481,10 @@ class Parser:
             ],
         ] = []
         self._next_scalar_as_key = False
+        #: flag for _process_token that the preceding token was a ValueToken
+        #: => if applicable, the next token will be a value, unless a block is
+        #:    started
+        self._next_token_is_value = False
         self._unprocessed_tokens: Optional[List[TokenNode]] = None
         self._last_start: Optional[Position] = None
 
@@ -507,7 +515,12 @@ class Parser:
             # Store which block start corresponds to what breadcrumb to help
             # handling end block tokens
             self._block_starts.append((token, self._breadcrumbs[-1]))
+            # a block is starting, so the next token cannot be a value, it will
+            # be a complex type instead
+            self._next_token_is_value = False
 
+        if isinstance(token, yaml.ValueToken):
+            self._next_token_is_value = True
         if isinstance(token, yaml.ValueToken) and isinstance(
             self._breadcrumbs[-1], StateParameterNode
         ):
@@ -532,6 +545,9 @@ class Parser:
                 ),
             ):
                 self._breadcrumbs.append(self._unprocessed_tokens[-1])
+                # a block is starting, so the next token cannot be a value, it
+                # will be a complex type instead
+                self._next_token_is_value = False
 
         if isinstance(
             token,
@@ -577,6 +593,10 @@ class Parser:
         if self._unprocessed_tokens is not None:
             # If self._unprocessed_tokens is set then we don't have
             # Salt-specific data token to process
+            # reset the flag that the next token is a value, as the current
+            # token has now been put into self._unprocessed_tokens and will be
+            # taken care of in the next sweep
+            self._next_token_is_value = False
             return
 
         if isinstance(token, yaml.KeyToken):
@@ -617,9 +637,9 @@ class Parser:
                 changed = getattr(self._breadcrumbs[-1], "set_key")(
                     token.value
                 )
-                # If the changed node isn't the same than the one we called the function on,
-                # that means that the node had to be converted and we need to
-                # update the breadcrumbs too.
+                # If the changed node isn't the same than the one we called the
+                # function on, that means that the node had to be converted and
+                # we need to update the breadcrumbs too.
                 if changed != self._breadcrumbs[-1]:
                     old = self._breadcrumbs.pop()
                     self._breadcrumbs.append(changed)
@@ -650,9 +670,20 @@ class Parser:
                     if getattr(new_node, "set_key"):
                         getattr(new_node, "set_key")(token.value)
 
+                    # this scalar token is actually the plain value of the
+                    # previous key and "a new thing" starts with the next token
+                    # => pop the current breadcrumb as it is now processed
+                    if self._next_token_is_value:
+                        last = self._breadcrumbs.pop()
+                        if last.end is None:
+                            last.end = token_end
+
+            self._next_token_is_value = False
+
     def parse(self) -> Tree:
         """
-        Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS file.
+        Generate the Abstract Syntax Tree for a ``jinja|yaml`` rendered SLS
+        file.
 
         :return: the generated AST
         :raises ValueException: for any other renderer but ``jinja|yaml``
@@ -663,10 +694,8 @@ class Parser:
         try:
             for token in tokens:
                 log.debug(token)
-                print(token)
                 self._process_token(token)
         except yaml.scanner.ScannerError as err:
-            print(err)
             log.debug(err)
             if token:
                 # Properly close the opened blocks

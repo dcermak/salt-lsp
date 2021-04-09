@@ -621,7 +621,7 @@ def test_state_no_param():
         states=[
             StateNode(
                 start=Position(line=0, col=0),
-                end=Position(line=2, col=0),
+                end=Position(line=1, col=14),
                 identifier="jdoe",
                 states=[
                     StateCallNode(
@@ -791,5 +791,67 @@ def test_pop_breadcrumb_from_flow_sequence():
                     ),
                 ],
             )
+        ],
+    )
+
+
+def test_list_index_out_of_range():
+    contents = """
+root:
+  user.present
+
+ilmehtar:
+  user.present:
+    - fullname: Richard Brown
+    - home: /home/ilmehtar
+"""
+    tree = parse(contents)
+    assert tree == Tree(
+        start=Position(line=0, col=0),
+        end=Position(line=8, col=0),
+        includes=None,
+        extend=None,
+        states=[
+            StateNode(
+                start=Position(line=1, col=0),
+                end=Position(line=2, col=14),
+                identifier="root",
+                states=[
+                    StateCallNode(
+                        start=Position(line=2, col=2),
+                        end=Position(line=2, col=14),
+                        name="user.present",
+                        parameters=[],
+                        requisites=[],
+                    )
+                ],
+            ),
+            StateNode(
+                start=Position(line=4, col=0),
+                end=Position(line=8, col=0),
+                identifier="ilmehtar",
+                states=[
+                    StateCallNode(
+                        start=Position(line=5, col=2),
+                        end=Position(line=8, col=0),
+                        name="user.present",
+                        parameters=[
+                            StateParameterNode(
+                                start=Position(line=6, col=4),
+                                end=Position(line=7, col=4),
+                                name="fullname",
+                                value="Richard Brown",
+                            ),
+                            StateParameterNode(
+                                start=Position(line=7, col=4),
+                                end=Position(line=8, col=0),
+                                name="home",
+                                value="/home/ilmehtar",
+                            ),
+                        ],
+                        requisites=[],
+                    )
+                ],
+            ),
         ],
     )
