@@ -621,7 +621,7 @@ def test_state_no_param():
         states=[
             StateNode(
                 start=Position(line=0, col=0),
-                end=Position(line=2, col=0),
+                end=Position(line=1, col=14),
                 identifier="jdoe",
                 states=[
                     StateCallNode(
