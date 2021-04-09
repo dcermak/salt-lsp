@@ -6,7 +6,7 @@ import os
 import os.path
 import shlex
 import subprocess
-from typing import Iterator, List, Optional, TypeVar
+from typing import Iterator, List, NewType, Optional, TypeVar, Union
 from urllib.parse import urlparse
 
 from pygls.lsp.types import Position, Range
@@ -101,10 +101,14 @@ def get_last_element_of_iterator(iterator: Iterator[T]) -> Optional[T]:
         return None
 
 
+#: Type for URIs
+Uri = NewType("Uri", str)
+
+
 class FileUri:
     """Simple class for handling file:// URIs"""
 
-    def __init__(self, uri: str) -> None:
+    def __init__(self, uri: Union[str, Uri]) -> None:
         self._parse_res = urlparse(uri)
         if self._parse_res.scheme != "" and self._parse_res.scheme != "file":
             raise ValueError(f"Invalid uri scheme {self._parse_res.scheme}")

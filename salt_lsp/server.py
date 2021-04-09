@@ -37,13 +37,35 @@ from salt_lsp.parser import (
 )
 
 
+SLS_LANGUAGE_ID = "sls"
+
+
 @dataclass(init=False)
 class SlsFile:
+    """
+    Representation of a ``.sls`` file.
+    """
+
+    #: The raw (= unparsed) contents of the sls file
     contents: str
+
+    #: Path to file on the file system
     path: str
+
+    #: The contents of this file parsed by ruamel
     parsed_contents: Optional[Any] = None
+
+    #: If true, then the file contents have been changed, but
+    #: :ref:`parsed_contents` has not been updated
     parsed_contents_stale: bool = True
-    includes: List[str] = field(default_factory=list)
+
+    #: A list of URIs with the includes of this sls file
+    includes: List[utils.Uri] = field(default_factory=list)
+
+    #: The current "version" of this file.
+    #: This is a counter that is incremented on each update of the file
+    #: contents.
+    version: int = 0
 
     @staticmethod
     def resolve_include(top_sls_dir: str, include_entry: str) -> Optional[str]:
@@ -56,7 +78,8 @@ class SlsFile:
             return entry_sls_path
         return None
 
-    def __init__(self, contents: str, uri: str) -> None:
+    def __init__(self, contents: str, uri: str, version: int = 0) -> None:
+        self.version = version
         self.contents = contents
         self.path = utils.FileUri(uri).path
         self.reparse()
@@ -70,7 +93,7 @@ class SlsFile:
                 and top_sls_location is not None
             ):
                 self.includes = list(
-                    f"file://{path}"
+                    utils.Uri(f"file://{path}")
                     for path in filter(
                         None,
                         (
@@ -155,11 +178,18 @@ class SaltServer(LanguageServer):
             self._files[params.text_document.uri] = SlsFile(
                 contents=params.text_document.text,
                 uri=params.text_document.uri,
+                version=max(0, int(params.text_document.version))
+                if params.text_document.version is not None
+                else 0,
             )
         else:
             self._files[
                 params.text_document.uri
             ].contents = params.text_document.text
+            if params.text_document.version is not None:
+                self._files[params.text_document.uri].version = max(
+                    0, int(params.text_document.version)
+                )
             self._files[params.text_document.uri].reparse()
 
         self.register_includes(params.text_document.uri)
@@ -363,9 +393,28 @@ def did_close(salt_srv: SaltServer, params: types.DidCloseTextDocumentParams):
 
 
 @salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
-def did_open(salt_srv: SaltServer, params: types.DidOpenTextDocumentParams):
-    """Text document did open notification."""
+def did_open(
+    salt_srv: SaltServer, params: types.DidOpenTextDocumentParams
+) -> Optional[types.TextDocumentItem]:
+    """Text document did open notification.
+
+    This function registers the newly opened file with the salt server.
+    """
     salt_srv.register_file(params)
+    registered_file = salt_srv.get_sls_file(params.text_document.uri)
+    if registered_file is None:
+        salt_srv.logger.error(
+            "Could not retrieve the just registered file with the URI %s from "
+            "the server",
+            params.text_document.uri,
+        )
+        return None
+    return types.TextDocumentItem(
+        uri=params.text_document.uri,
+        language_id=SLS_LANGUAGE_ID,
+        text=params.text_document.text or "",
+        version=registered_file.version,
+    )
 
 
 @salt_server.feature(DOCUMENT_SYMBOL)
