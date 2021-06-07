@@ -1,7 +1,0 @@
-black
-mypy
-pylint
-pytest
-salt
-pyfakefs
-pytest-cov

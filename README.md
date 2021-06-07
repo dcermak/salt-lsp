@@ -10,29 +10,28 @@ Salt Language Server Protocol Server
 ## Prerequisites
 
 - Python >= 3.8
+- [Poetry](https://python-poetry.org/)
 - VSCode (required for live testing the server from an editor)
 
 
 ## Setup
 
-Setup & start the server:
+Install the dependencies:
 
 ```ShellSession
-$ python3 -m venv .env3
-$ . .env3/bin/activate
-$ pip install -r requirements.txt -r dev-requirements.txt
+$ poetry install
 ```
 
 Create the completion classes once:
 
 ```ShellSession
-$ ./create_completion_classes.py
+$ poetry run ./create_completion_classes.py
 ```
 
 Start the server:
 
 ```ShellSession
-$ ./lsp_server.py --tcp
+$ poetry run ./lsp_server.py --tcp
 ```
 
 Launch the client:
