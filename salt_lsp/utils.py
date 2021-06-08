@@ -48,7 +48,7 @@ def get_top(path: str) -> Optional[str]:
     return get_top(parent)
 
 
-def get_root(path: str) -> str:
+def get_root(path: str) -> Optional[str]:
     root = get_top(path)
     return root or get_git_root(path)
 
@@ -56,6 +56,8 @@ def get_root(path: str) -> str:
 def get_sls_includes(path: str) -> List[str]:
     sls_files = []
     top = get_root(path)
+    if not top:
+        return []
     for root, _, files in os.walk(top):
         base = root[len(top) + 1 :].replace(os.path.sep, ".")
         sls_files += [
