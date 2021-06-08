@@ -2,12 +2,14 @@
 Utility functions to extract data from the files
 """
 
+from __future__ import annotations
+
 import os
 import os.path
 import shlex
 import subprocess
 from typing import Iterator, List, NewType, Optional, TypeVar, Union
-from urllib.parse import urlparse
+from urllib.parse import urlparse, ParseResult
 
 from pygls.lsp.types import Position, Range
 
@@ -118,14 +120,21 @@ Uri = NewType("Uri", str)
 class FileUri:
     """Simple class for handling file:// URIs"""
 
-    def __init__(self, uri: Union[str, Uri]) -> None:
-        self._parse_res = urlparse(uri)
+    def __init__(self, uri: Union[str, Uri, FileUri]) -> None:
+        self._parse_res: ParseResult = (
+            uri._parse_res if isinstance(uri, FileUri) else urlparse(uri)
+        )
         if self._parse_res.scheme != "" and self._parse_res.scheme != "file":
             raise ValueError(f"Invalid uri scheme {self._parse_res.scheme}")
+        if self._parse_res.scheme == "":
+            self._parse_res = urlparse("file://" + self._parse_res.path)
 
     @property
     def path(self) -> str:
         return self._parse_res.path
+
+    def __str__(self) -> str:
+        return self._parse_res.geturl()
 
 
 def is_valid_file_uri(uri: str) -> bool:

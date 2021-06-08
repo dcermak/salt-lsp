@@ -34,6 +34,15 @@ class TestFileUri:
             FileUri("http://foo.bar.xyz")
         assert "Invalid uri scheme http" in str(excinfo.value)
 
+    def test_accepts_FileUri_objects(self):
+        file_uri = FileUri("/foo/bar")
+        assert FileUri(file_uri).path == file_uri.path
+
+    def test_to_string(self):
+        assert str(FileUri("file:///foo/bar")) == "file:///foo/bar"
+        assert str(FileUri("/foo/bar")) == "file:///foo/bar"
+        assert str(FileUri(FileUri("/foo/bar"))) == "file:///foo/bar"
+
 
 def test_is_valid_file_uri_accepts_paths():
     assert is_valid_file_uri("/path/to/foo")
