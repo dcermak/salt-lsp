@@ -403,6 +403,23 @@ toml = "*"
 testing = ["fields", "hunter", "process-tests", "six", "pytest-xdist", "virtualenv"]
 
 [[package]]
+name = "pytest-testinfra"
+version = "6.3.0"
+description = "Test infrastructures"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+pytest = "!=3.0.2"
+
+[package.extras]
+ansible = ["ansible"]
+paramiko = ["paramiko"]
+salt = ["salt"]
+winrm = ["pywinrm"]
+
+[[package]]
 name = "pyyaml"
 version = "5.4.1"
 description = "YAML parser and emitter for Python"
@@ -954,6 +971,10 @@ pytest = [
 pytest-cov = [
     {file = "pytest-cov-2.12.1.tar.gz", hash = "sha256:261ceeb8c227b726249b376b8526b600f38667ee314f910353fa318caa01f4d7"},
     {file = "pytest_cov-2.12.1-py2.py3-none-any.whl", hash = "sha256:261bb9e47e65bd099c89c3edf92972865210c36813f80ede5277dceb77a4a62a"},
+]
+pytest-testinfra = [
+    {file = "pytest-testinfra-6.3.0.tar.gz", hash = "sha256:3ee1817983b11f04489141058c2f99018daa26d21bc1bc759b6a22c7938aea55"},
+    {file = "pytest_testinfra-6.3.0-py3-none-any.whl", hash = "sha256:bbd1423b5938435f71be717842969f10d77b7d0e048b655a91e9f21e58a52237"},
 ]
 pyyaml = [
     {file = "PyYAML-5.4.1-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:3b2b1824fe7112845700f815ff6a489360226a5609b96ec2190a45e62a9fc922"},

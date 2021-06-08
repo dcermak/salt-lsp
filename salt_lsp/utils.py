@@ -15,16 +15,22 @@ import salt_lsp.parser as parser
 from salt_lsp.parser import AstNode
 
 
-def get_git_root(path: str) -> str:
-    return str(
-        subprocess.run(
-            shlex.split("git rev-parse --show-toplevel"),
-            cwd=os.path.dirname(path),
-            check=True,
-            capture_output=True,
-        ).stdout,
-        encoding="utf-8",
+def get_git_root(path: str) -> Optional[str]:
+    """Get the root of the git repository to which `path` belongs.
+
+    If git is not installed or `path` is not in a git repository, then `None`
+    is returned.
+    """
+    res = subprocess.run(
+        shlex.split("git rev-parse --show-toplevel"),
+        cwd=os.path.dirname(path) if not os.path.isdir(path) else path,
+        check=False,
+        capture_output=True,
     )
+    if res.returncode == 0:
+        return str(res.stdout.strip(), encoding="utf-8")
+    else:
+        return None
 
 
 def get_top(path: str) -> Optional[str]:

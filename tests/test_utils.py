@@ -1,8 +1,11 @@
+import os
+
 import pytest
 from pygls.lsp import types
 
 from salt_lsp.utils import (
     ast_node_to_range,
+    get_git_root,
     get_last_element_of_iterator,
     is_valid_file_uri,
     FileUri,
@@ -58,3 +61,25 @@ class TestAstNodeToRange:
             start=types.Position(line=0, character=1),
             end=types.Position(line=2, character=3),
         )
+
+
+def test_get_git_root(host, tmp_path):
+    os.chdir(tmp_path)
+    cwd = os.getcwd()
+    try:
+        host.run_expect([0], "git init")
+        foo = tmp_path / "foo"
+        foobar = foo / "bar"
+        foobar.mkdir(parents=True)
+
+        assert get_git_root(str(foobar)) == str(tmp_path)
+        assert get_git_root(str(foo)) == str(tmp_path)
+        assert get_git_root(str(tmp_path)) == str(tmp_path)
+        assert get_git_root(str(foobar / "init.sls")) == str(tmp_path)
+    except Exception as exc:
+        os.chdir(cwd)
+        raise exc
+
+
+def test_get_git_root_outside_of_git_repository(tmp_path):
+    assert get_git_root(tmp_path) is None
