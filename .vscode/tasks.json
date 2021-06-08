@@ -4,15 +4,15 @@
         {
             "label": "compile:client",
             "type": "shell",
-            "command": "tsc",
+            "command": "yarn run compile",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
             "presentation": {
                 "panel": "shared",
-                "reveal": "silent",
-            },
-        },
+                "reveal": "silent"
+            }
+        }
     ]
 }
