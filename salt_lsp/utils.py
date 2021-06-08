@@ -34,8 +34,12 @@ def get_git_root(path: str) -> Optional[str]:
 
 
 def get_top(path: str) -> Optional[str]:
-    parent = os.path.dirname(path)
-    if not bool(parent):
+    if os.path.isdir(path):
+        if os.path.isfile(os.path.join(path, "top.sls")):
+            return path
+
+    parent, tail = os.path.split(path)
+    if (tail == "" and parent == "/") or not parent:
         return None
     if os.path.isfile(os.path.join(parent, "top.sls")):
         return parent

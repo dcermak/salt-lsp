@@ -7,6 +7,7 @@ from salt_lsp.utils import (
     ast_node_to_range,
     get_git_root,
     get_last_element_of_iterator,
+    get_top,
     is_valid_file_uri,
     FileUri,
 )
@@ -83,3 +84,34 @@ def test_get_git_root(host, tmp_path):
 
 def test_get_git_root_outside_of_git_repository(tmp_path):
     assert get_git_root(tmp_path) is None
+
+
+def test_get_top_stops_at_root():
+    assert get_top("/foo/bar/baz/i/a/e") is None
+
+
+def test_get_top_looks_in_current_dir(tmp_path):
+    with open(tmp_path / "top.sls", "w") as top_sls:
+        top_sls.write("")
+
+    assert get_top(tmp_path) == tmp_path
+
+
+def test_get_top_looks_in_current_dir_from_file(tmp_path):
+    with open(tmp_path / "top.sls", "w") as top_sls:
+        top_sls.write("")
+
+    assert get_top(tmp_path / "foo.sls") == str(tmp_path)
+
+
+def test_get_top_recurses_into_parent_dirs(tmp_path):
+    foo_dir = tmp_path / "foo"
+    foo_dir.mkdir()
+    init_sls = foo_dir / "init.sls"
+    with open(init_sls, "w") as init_sls_file:
+        init_sls_file.write("")
+    with open(tmp_path / "top.sls", "w") as top_sls:
+        top_sls.write("")
+
+    assert get_top(foo_dir) == str(tmp_path)
+    assert get_top(init_sls) == str(tmp_path)
