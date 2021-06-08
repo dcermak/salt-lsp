@@ -11,8 +11,8 @@
             },
             "presentation": {
                 "panel": "shared",
-                "reveal": "silent",
-            },
-        },
+                "reveal": "silent"
+            }
+        }
     ]
 }
