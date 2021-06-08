@@ -4,7 +4,7 @@
         {
             "label": "compile:client",
             "type": "shell",
-            "command": "tsc",
+            "command": "yarn run compile",
             "group": {
                 "kind": "build",
                 "isDefault": true
