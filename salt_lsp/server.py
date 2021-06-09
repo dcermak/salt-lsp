@@ -27,17 +27,14 @@ from pygls.server import LanguageServer
 from ruamel import yaml
 
 import salt_lsp.utils as utils
-from salt_lsp.base_types import StateNameCompletion
 from salt_lsp.document_symbols import tree_to_document_symbols
+from salt_lsp.base_types import StateNameCompletion, SLS_LANGUAGE_ID
 from salt_lsp.parser import (
     IncludesNode,
     RequisiteNode,
     StateParameterNode,
     parse,
 )
-
-
-SLS_LANGUAGE_ID = "sls"
 
 
 @dataclass(init=False)
