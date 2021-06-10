@@ -152,129 +152,118 @@ class SaltServer(LanguageServer):
         return None
 
 
-salt_server = SaltServer()
-
-
-@salt_server.feature(
-    COMPLETION, CompletionOptions(trigger_characters=["-", "."])
-)
-def completions(
-    salt_srv: SaltServer, params: CompletionParams
-) -> Optional[CompletionList]:
-    """Returns completion items."""
-    if params.context is not None and params.context.trigger_character == ".":
-        return CompletionList(
-            is_incomplete=False,
-            items=[
-                CompletionItem(label=sub_name, documentation=docs)
-                for sub_name, docs in salt_srv.complete_state_name(params)
-            ],
-        )
-
-    file = salt_srv.get_sls_file(params.text_document.uri)
-    if file is None or file.contents is None:
-        # FIXME: load the file
-        return None
-
-    path = utils.construct_path_to_position(file.contents, params.position)
-    if (
-        path
-        and isinstance(path[-1], IncludesNode)
-        or basename(params.text_document.uri) == "top.sls"
-        and isinstance(path[-1], StateParameterNode)
-    ):
-        file_path = utils.FileUri(params.text_document.uri).path
-        includes = utils.get_sls_includes(file_path)
-        return CompletionList(
-            is_incomplete=False,
-            items=[
-                CompletionItem(label=f" {include}") for include in includes
-            ],
-        )
-    return None
-
-
-@salt_server.feature(DEFINITION)
-def goto_definition(
-    salt_srv: SaltServer, params: types.DeclarationParams
-) -> Optional[types.Location]:
-    uri = params.text_document.uri
-    file = salt_srv.get_sls_file(uri)
-    parsed_contents = salt_srv.get_file_parsed_contents(uri)
-    if file is None or file.contents is None or parsed_contents is None:
-        return None
-    path = utils.construct_path_to_position(file.contents, params.position)
-
-    # Going to definition is only handled on requisites ids
-    if not isinstance(path[-1], RequisiteNode):
-        return None
-
-    id_to_find = cast(RequisiteNode, path[-1]).reference
-    if id_to_find is None:
-        return None
-
-    # we can be lucky and the id is actually defined in the same document
-    if id_to_find in parsed_contents:
-        pos = types.Position(
-            line=parsed_contents[id_to_find].lc.line,
-            character=parsed_contents[id_to_find].lc.col,
-        )
-        return types.Location(uri=uri, range=types.Range(start=pos, end=pos))
-
-    return salt_srv.find_id_in_includes(id_to_find, uri)
-
-
-@salt_server.feature(TEXT_DOCUMENT_DID_CHANGE)
-def on_did_change(
-    salt_srv: SaltServer, params: types.DidChangeTextDocumentParams
-):
-    salt_srv.reconcile_file(params)
-
-
-@salt_server.feature(TEXT_DOCUMENT_DID_CLOSE)
-def did_close(salt_srv: SaltServer, params: types.DidCloseTextDocumentParams):
-    """Text document did close notification."""
-    salt_srv.remove_file(params)
-
-
-@salt_server.feature(TEXT_DOCUMENT_DID_OPEN)
-def did_open(
-    salt_srv: SaltServer, params: types.DidOpenTextDocumentParams
-) -> Optional[types.TextDocumentItem]:
-    """Text document did open notification.
-
-    This function registers the newly opened file with the salt server.
+def setup_salt_server_capabilities(server: SaltServer) -> None:
+    """Adds the completion, goto definition and document symbol capabilities to
+    the provided server.
     """
-    salt_srv.register_file(params)
-    registered_file = salt_srv.get_sls_file(params.text_document.uri)
-    if registered_file is None:
-        salt_srv.logger.error(
-            "Could not retrieve the just registered file with the URI %s from "
-            "the server",
+
+    @server.feature(
+        COMPLETION, CompletionOptions(trigger_characters=["-", "."])
+    )
+    def completions(
+        salt_server: SaltServer, params: CompletionParams
+    ) -> Optional[CompletionList]:
+        """Returns completion items."""
+        if (
+            params.context is not None
+            and params.context.trigger_character == "."
+        ):
+            return CompletionList(
+                is_incomplete=False,
+                items=[
+                    CompletionItem(label=sub_name, documentation=docs)
+                    for sub_name, docs in salt_server.complete_state_name(
+                        params
+                    )
+                ],
+            )
+
+        if (
+            tree := salt_server.workspace.trees.get(params.text_document.uri)
+        ) is None:
+            return None
+
+        path = utils.construct_path_to_position(tree, params.position)
+        if (
+            path
+            and isinstance(path[-1], IncludesNode)
+            or basename(params.text_document.uri) == "top.sls"
+            and isinstance(path[-1], StateParameterNode)
+        ):
+            file_path = utils.FileUri(params.text_document.uri).path
+            includes = utils.get_sls_includes(file_path)
+            return CompletionList(
+                is_incomplete=False,
+                items=[
+                    CompletionItem(label=f" {include}") for include in includes
+                ],
+            )
+        return None
+
+    @server.feature(DEFINITION)
+    def goto_definition(
+        salt_server: SaltServer, params: types.DeclarationParams
+    ) -> Optional[types.Location]:
+        uri = params.text_document.uri
+        if (tree := salt_server.workspace.trees.get(uri)) is None:
+            return None
+        path = utils.construct_path_to_position(tree, params.position)
+
+        # Going to definition is only handled on requisites ids
+        if not isinstance(path[-1], RequisiteNode):
+            return None
+
+        if (id_to_find := cast(RequisiteNode, path[-1]).reference) is None:
+            return None
+
+        return salt_server.find_id_in_doc_and_includes(id_to_find, uri)
+
+    @server.feature(TEXT_DOCUMENT_DID_CHANGE)
+    def on_did_change(
+        salt_server: SaltServer, params: types.DidChangeTextDocumentParams
+    ):
+        for change in params.content_changes:
+            # check that this is a types.TextDocumentContentChangeEvent
+            if hasattr(change, "range"):
+                assert isinstance(change, types.TextDocumentContentChangeEvent)
+                salt_server.workspace.update_document(
+                    params.text_document, change
+                )
+
+    @server.feature(TEXT_DOCUMENT_DID_CLOSE)
+    def did_close(
+        salt_server: SaltServer, params: types.DidCloseTextDocumentParams
+    ):
+        """Text document did close notification."""
+        salt_server.workspace.remove_document(params.text_document.uri)
+
+    @server.feature(TEXT_DOCUMENT_DID_OPEN)
+    def did_open(
+        salt_server: SaltServer, params: types.DidOpenTextDocumentParams
+    ) -> Optional[types.TextDocumentItem]:
+        """Text document did open notification.
+
+        This function registers the newly opened file with the salt server.
+        """
+        salt_server.logger.debug(
+            "adding text document '%s' to the workspace",
             params.text_document.uri,
         )
-        return None
-    return types.TextDocumentItem(
-        uri=params.text_document.uri,
-        language_id=SLS_LANGUAGE_ID,
-        text=params.text_document.text or "",
-        version=registered_file.version,
-    )
+        salt_server.workspace.put_document(params.text_document)
+        doc = salt_server.workspace.get_document(params.text_document.uri)
+        return types.TextDocumentItem(
+            uri=params.text_document.uri,
+            language_id=SLS_LANGUAGE_ID,
+            text=params.text_document.text or "",
+            version=doc.version,
+        )
 
-
-@salt_server.feature(DOCUMENT_SYMBOL)
-def document_symbol(
-    salt_srv: SaltServer, params: types.DocumentSymbolParams
-) -> Optional[
-    Union[List[types.DocumentSymbol], List[types.SymbolInformation]]
-]:
-    sls_file = salt_srv.get_sls_file(params.text_document.uri)
-    # FIXME: register & read in file now
-    if sls_file is None:
-        return None
-
-    tree = parse(sls_file.contents)
-    doc_symbols = tree_to_document_symbols(
-        tree, salt_srv._state_name_completions
-    )
-    return doc_symbols
+    @server.feature(DOCUMENT_SYMBOL)
+    def document_symbol(
+        salt_server: SaltServer, params: types.DocumentSymbolParams
+    ) -> Optional[
+        Union[List[types.DocumentSymbol], List[types.SymbolInformation]]
+    ]:
+        return salt_server.workspace._document_symbols.get(
+            params.text_document.uri, []
+        )

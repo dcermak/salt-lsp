@@ -6,7 +6,7 @@ import pickle
 from os.path import dirname, abspath, join
 from typing import Dict
 
-from salt_lsp.server import salt_server
+from salt_lsp.server import SaltServer, setup_salt_server_capabilities
 from salt_lsp.base_types import StateNameCompletion
 
 LOG_LEVEL_DICT: Dict[str, int] = {
@@ -71,6 +71,8 @@ def main():
     ) as states_file:
         states: Dict[str, StateNameCompletion] = pickle.load(states_file)
 
+    salt_server = SaltServer()
+    setup_salt_server_capabilities(salt_server)
     salt_server.post_init(states, log_level)
 
     if args.stop_after_init:
