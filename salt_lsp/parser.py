@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from os.path import abspath, dirname, exists, join
+from os.path import abspath, dirname, exists, isdir, join
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
 
 from pygls.lsp import types
@@ -120,7 +120,12 @@ class IncludeNode(AstNode):
         if self.value is None:
             return None
 
-        top_path = dirname(abspath(top_path))
+        top_path = (
+            abs_top_path
+            if isdir(abs_top_path := abspath(top_path))
+            else dirname(abs_top_path)
+        )
+
         dest = join(*self.value.split("."))
         init_sls_path = join(top_path, dest, "init.sls")
         entry_sls_path = join(top_path, f"{dest}.sls")
