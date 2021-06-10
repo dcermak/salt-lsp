@@ -33,7 +33,7 @@
       }
     ]
   },
-  "main": "./client/out/extension",
+  "main": "./clients/vscode/out/extension",
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
     "compile": "tsc -p ./",
