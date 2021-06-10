@@ -25,13 +25,13 @@ $ poetry install
 Create the completion classes once:
 
 ```ShellSession
-$ poetry run ./create_completion_classes.py
+$ poetry run dump_state_name_completions
 ```
 
 Start the server:
 
 ```ShellSession
-$ poetry run ./lsp_server.py --tcp
+$ poetry run salt_lsp_server --tcp
 ```
 
 Launch the client:

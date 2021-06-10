@@ -60,10 +60,10 @@ jobs:
         run: poetry install
 
       - name: run black
-        run: poetry run black --check --diff salt_lsp/*py tests/*py *py
+        run: poetry run black --check --diff salt_lsp/*py tests/*py
 
       - name: run mypy
-        run: poetry run mypy salt_lsp/*py *py
+        run: poetry run mypy salt_lsp/*py
 
       - name: run pylint
-        run: poetry run pylint --fail-under 9.2 salt_lsp/*py *py
+        run: poetry run pylint --fail-under 9.2 salt_lsp/*py

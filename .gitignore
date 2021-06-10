@@ -132,4 +132,4 @@ node_modules
 client/out/
 .env3/
 
-data/states.pickle
+salt_lsp/data/states.pickle

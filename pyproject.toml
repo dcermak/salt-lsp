@@ -4,6 +4,7 @@ version = "0.0.1"
 description = "Salt Language Server Protocol Server"
 authors = ["Dan Čermák <dcermak@suse.com>", "Cédric Bosdonnat <cbosdonnat@suse.com>"]
 license = "Apache-2.0"
+include = ["salt_lsp/data/states.pickle"]
 
 [tool.poetry.dependencies]
 # remove the compat code from salt_lsp/workspace.py once we drop python 3.8 support
@@ -20,6 +21,10 @@ pylint = "^2.7.4"
 pyfakefs = "^4.4.0"
 salt = "^3003"
 pytest-testinfra = "^6.3.0"
+
+[tool.poetry.scripts]
+salt_lsp_server = 'salt_lsp.__main__:main'
+dump_state_name_completions = 'salt_lsp.cmds:dump_state_name_completions'
 
 [build-system]
 requires = ["poetry>=0.12"]
