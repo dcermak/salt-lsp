@@ -10,6 +10,8 @@ from salt_lsp.utils import (
     get_top,
     is_valid_file_uri,
     FileUri,
+    UriDict,
+    Uri,
 )
 from salt_lsp.parser import IncludeNode, Position
 
@@ -124,3 +126,28 @@ def test_get_top_recurses_into_parent_dirs(tmp_path):
 
     assert get_top(foo_dir) == str(tmp_path)
     assert get_top(init_sls) == str(tmp_path)
+
+
+class TestUriDict:
+    def test_getter(self):
+        p = "/foo/bar"
+        d = UriDict({f"file://{p}": 1})
+
+        for key in (
+            p,
+            FileUri(p),
+            FileUri(f"file://{p}"),
+            Uri(p),
+            Uri(f"file://{p}"),
+        ):
+            assert d[key] == 1
+
+    def test_setter(self):
+        p = "/foo/bar"
+        d = UriDict()
+
+        for i, key in enumerate(
+            (p, FileUri(p), FileUri(f"file://{p}"), Uri(p), Uri(f"file://{p}"))
+        ):
+            d[key] = 42 + i
+            assert d[p] == 42 + i

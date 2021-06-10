@@ -4,11 +4,21 @@ Utility functions to extract data from the files
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 import os
 import os.path
 import shlex
 import subprocess
-from typing import Iterator, List, NewType, Optional, TypeVar, Union
+from typing import (
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    NewType,
+    Optional,
+    TypeVar,
+    Union,
+)
 from urllib.parse import urlparse, ParseResult
 
 from pygls.lsp.types import Position, Range
@@ -134,6 +144,37 @@ class FileUri:
 
     def __str__(self) -> str:
         return self._parse_res.geturl()
+
+
+U = Union[Uri, FileUri, str]
+
+
+class UriDict(Generic[T], MutableMapping):
+    """Dictionary that stores elements assigned to paths which are then
+    transparently accessible via their Uri or the path or the FileUri.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self._data: Dict[str, T] = dict()
+        self.update(dict(*args, **kwargs))
+
+    def __getitem__(self, key: U) -> T:
+        return self._data[self._key_gen(key)]
+
+    def __setitem__(self, key: U, value: T) -> None:
+        self._data[self._key_gen(key)] = value
+
+    def __delitem__(self, key: U) -> None:
+        del self._data[self._key_gen(key)]
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
+
+    def _key_gen(self, key: U) -> str:
+        return str(FileUri(key))
 
 
 def is_valid_file_uri(uri: str) -> bool:
