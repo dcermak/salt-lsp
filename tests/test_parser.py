@@ -5,6 +5,7 @@ from salt_lsp.parser import (
     StateNode,
     StateParameterNode,
     Tree,
+    parse,
 )
 from salt_lsp.utils import construct_path_to_position
 
@@ -60,11 +61,13 @@ rootco-salt-backup.timer:
       - file: /etc/systemd/system/rootco-salt-backup.timer
 """
 
+MASTER_DOT_SLS_TREE = parse(MASTER_DOT_SLS)
+
 
 def test_path_to_pkgs_list():
     for line in (3, 4, 5):
         path = construct_path_to_position(
-            MASTER_DOT_SLS, Position(line=line, character=8)
+            MASTER_DOT_SLS_TREE, Position(line=line, character=8)
         )
 
         assert len(path) == 4
@@ -79,7 +82,7 @@ def test_path_to_pkgs_list():
 
 def test_path_to_require():
     path = construct_path_to_position(
-        MASTER_DOT_SLS, Position(line=8, character=7)
+        MASTER_DOT_SLS_TREE, Position(line=8, character=7)
     )
     assert len(path) == 5
     assert isinstance(path[0], Tree)
@@ -94,7 +97,7 @@ def test_path_to_require():
 
 def test_path_to_dummy():
     path = construct_path_to_position(
-        MASTER_DOT_SLS, Position(line=14, character=7)
+        MASTER_DOT_SLS_TREE, Position(line=14, character=7)
     )
 
     assert len(path) == 4
@@ -109,7 +112,7 @@ def test_path_to_dummy():
 
 def test_path_after_dummy():
     path = construct_path_to_position(
-        MASTER_DOT_SLS, Position(line=15, character=5)
+        MASTER_DOT_SLS_TREE, Position(line=15, character=5)
     )
 
     assert len(path) == 4
@@ -124,7 +127,7 @@ def test_path_after_dummy():
 
 def test_path_before_target():
     path = construct_path_to_position(
-        MASTER_DOT_SLS,
+        MASTER_DOT_SLS_TREE,
         # before "target: /srv/salt"
         Position(line=19, character=5),
     )
