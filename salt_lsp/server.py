@@ -4,9 +4,8 @@ Language Server Protocol implementation
 
 import logging
 import re
-from dataclasses import dataclass, field
-from os.path import basename, exists, join
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from os.path import basename
+from typing import Dict, List, Optional, Sequence, Tuple, Union, cast
 
 from pygls.capabilities import COMPLETION
 from pygls.lsp import types
@@ -24,90 +23,16 @@ from pygls.lsp.types import (
     CompletionParams,
 )
 from pygls.server import LanguageServer
-from ruamel import yaml
 
 import salt_lsp.utils as utils
-from salt_lsp.document_symbols import tree_to_document_symbols
 from salt_lsp.base_types import StateNameCompletion, SLS_LANGUAGE_ID
+from salt_lsp.workspace import SaltLspProto, SlsFileWorkspace
 from salt_lsp.parser import (
     IncludesNode,
     RequisiteNode,
     StateParameterNode,
-    parse,
+    Tree,
 )
-
-
-@dataclass(init=False)
-class SlsFile:
-    """
-    Representation of a ``.sls`` file.
-    """
-
-    #: The raw (= unparsed) contents of the sls file
-    contents: str
-
-    #: Path to file on the file system
-    path: str
-
-    #: The contents of this file parsed by ruamel
-    parsed_contents: Optional[Any] = None
-
-    #: If true, then the file contents have been changed, but
-    #: :ref:`parsed_contents` has not been updated
-    parsed_contents_stale: bool = True
-
-    #: A list of URIs with the includes of this sls file
-    includes: List[utils.Uri] = field(default_factory=list)
-
-    #: The current "version" of this file.
-    #: This is a counter that is incremented on each update of the file
-    #: contents.
-    version: int = 0
-
-    @staticmethod
-    def resolve_include(top_sls_dir: str, include_entry: str) -> Optional[str]:
-        dest = join(*include_entry.split("."))
-        init_sls_path = join(top_sls_dir, dest, "init.sls")
-        entry_sls_path = join(top_sls_dir, f"{dest}.sls")
-        if exists(init_sls_path):
-            return init_sls_path
-        if exists(entry_sls_path):
-            return entry_sls_path
-        return None
-
-    def __init__(self, contents: str, uri: str, version: int = 0) -> None:
-        self.version = version
-        self.contents = contents
-        self.path = utils.FileUri(uri).path
-        self.reparse()
-        self.includes = []
-
-        if self.parsed_contents is not None:
-            top_sls_location = utils.get_top(self.path)
-            if (
-                "include" in self.parsed_contents
-                and isinstance(self.parsed_contents["include"], list)
-                and top_sls_location is not None
-            ):
-                self.includes = list(
-                    utils.Uri(f"file://{path}")
-                    for path in filter(
-                        None,
-                        (
-                            SlsFile.resolve_include(top_sls_location, inc)
-                            for inc in self.parsed_contents["include"]
-                        ),
-                    )
-                )
-
-    def reparse(self) -> None:
-        try:
-            self.parsed_contents = yaml.load(
-                self.contents, Loader=yaml.RoundTripLoader
-            )
-            self.parsed_contents_stale = False
-        except Exception:
-            self.parsed_contents_stale = True
 
 
 class SaltServer(LanguageServer):
@@ -116,13 +41,20 @@ class SaltServer(LanguageServer):
     LINE_START_REGEX = re.compile(r"^(\s*)\b", re.MULTILINE)
 
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(protocol_cls=SaltLspProto)
 
-        self._files: Dict[str, SlsFile] = {}
         self._state_name_completions: Dict[str, StateNameCompletion] = {}
 
         self.logger: logging.Logger = logging.getLogger()
         self._state_names: List[str] = []
+
+    @property
+    def workspace(self) -> SlsFileWorkspace:
+        assert isinstance(super().workspace, SlsFileWorkspace), (
+            "expected to get a 'SlsFileWorkspace', but got a "
+            f"'{super().workspace.__class__.__name__}' instead"
+        )
+        return cast(SlsFileWorkspace, super().workspace)
 
     def post_init(
         self,
@@ -131,7 +63,7 @@ class SaltServer(LanguageServer):
     ) -> None:
         self._state_name_completions = state_name_completions
         self._state_names = list(state_name_completions.keys())
-        self.logger = logging.getLogger("SaltServer")
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(log_level)
 
     def complete_state_name(
@@ -142,10 +74,9 @@ class SaltServer(LanguageServer):
             and params.context.trigger_character == "."
         )
 
-        contents = self._files[params.text_document.uri].contents
-        ind = utils.position_to_index(
-            contents, params.position.line, params.position.character
-        )
+        doc = self.workspace.get_document(params.text_document.uri)
+        contents = doc.source
+        ind = doc.offset_at_position(params.position)
         last_match = utils.get_last_element_of_iterator(
             SaltServer.LINE_START_REGEX.finditer(contents, 0, ind)
         )
@@ -164,143 +95,60 @@ class SaltServer(LanguageServer):
             return completer.provide_subname_completion()
         return []
 
-    def remove_file(self, params: types.DidCloseTextDocumentParams) -> None:
-        del self._files[params.text_document.uri]
-
-    def register_file(
-        self,
-        params: types.DidOpenTextDocumentParams,
-    ) -> None:
-        if params.text_document.uri not in self._files:
-            self._files[params.text_document.uri] = SlsFile(
-                contents=params.text_document.text,
-                uri=params.text_document.uri,
-                version=max(0, int(params.text_document.version))
-                if params.text_document.version is not None
-                else 0,
-            )
-        else:
-            self._files[
-                params.text_document.uri
-            ].contents = params.text_document.text
-            if params.text_document.version is not None:
-                self._files[params.text_document.uri].version = max(
-                    0, int(params.text_document.version)
-                )
-            self._files[params.text_document.uri].reparse()
-
-        self.register_includes(params.text_document.uri)
-
-    def reconcile_file(
-        self,
-        params: types.DidChangeTextDocumentParams,
-    ) -> None:
-        if params.text_document.uri in self._files:
-            content = self._files[params.text_document.uri].contents
-            for change in params.content_changes:
-                if not hasattr(change, "range"):
-                    continue
-                assert isinstance(change, types.TextDocumentContentChangeEvent)
-                if change.range is None:
-                    continue
-                start = utils.position_to_index(
-                    content,
-                    change.range.start.line,
-                    change.range.start.character,
-                )
-                end = utils.position_to_index(
-                    content, change.range.end.line, change.range.end.character
-                )
-                self._files[params.text_document.uri].contents = (
-                    content[:start] + change.text + content[end:]
-                )
-                self._files[params.text_document.uri].reparse()
-
-    def register_includes(self, uri: str) -> None:
-        if uri not in self._files:
-            return
-        sls_file = self._files[uri]
-
-        for include in sls_file.includes:
-            assert utils.is_valid_file_uri(
-                include
-            ), f"got an invalid file uri: {include}"
-
-            if include not in self._files:
-                with open(utils.FileUri(include).path, "r") as include_file:
-                    contents = include_file.read(-1)
-                self.register_file(
-                    types.DidOpenTextDocumentParams(
-                        text_document=types.TextDocumentItem(
-                            uri=include, text=contents
-                        )
-                    )
-                )
-
-    def find_id_in_includes(
+    def find_id_in_doc_and_includes(
         self, id_to_find: str, starting_uri: str
     ) -> Optional[types.Location]:
-        # FIXME: this function is a bit dumb, as it actually loads the SlsFile
-        # of each include and then does that again when it calls itself
-        # recursively. -> the SlsFile should be one of its parameters
-        sls_file = self.get_sls_file(starting_uri)
-        if sls_file is None:
+        """Finds the first matching location of the given id in the document or
+        in its includes.
+
+        This function searches for the `id_to_find` starting in
+        `starting_uri`. If it does not find it in there, then it will continue
+        to search in the includes and returns the first match that it finds.
+        """
+        self.logger.debug(
+            "Request to find id '%s' starting in uri '%s'",
+            id_to_find,
+            starting_uri,
+        )
+        if (tree := self.workspace.trees.get(starting_uri)) is None:
             self.logger.error(
-                "Could not get the SlsFile of the file %s",
-                starting_uri,
+                "Cannot search in '%s', no tree present", starting_uri
             )
             return None
 
-        for inc in sls_file.includes:
-            inc_contents = self.get_file_parsed_contents(inc)
-            if inc_contents is None:
+        inc_of_uri = self.workspace.includes.get(starting_uri, [])
+
+        # FIXME: need to take ordering into account:
+        # https://docs.saltproject.io/en/latest/ref/states/compiler_ordering.html#the-include-statement
+        trees_and_uris_to_search: Sequence[
+            Tuple[Tree, Union[str, utils.FileUri]]
+        ] = [(tree, starting_uri)] + [
+            (t, inc)
+            for inc in inc_of_uri
+            if (t := self.workspace.trees.get(inc)) is not None
+        ]
+
+        for tree, uri in trees_and_uris_to_search:
+            self.logger.debug("Searching in '%s'", uri)
+            matching_states = [
+                state
+                for state in tree.states
+                if state.identifier == id_to_find
+            ]
+            if len(matching_states) != 1:
                 continue
 
-            if id_to_find in inc_contents:
-                target_element = inc_contents[id_to_find]
-                # this is a primitive type which has no line & column numbers
-                if not hasattr(target_element, "lc"):
-                    return None
-                pos = types.Position(
-                    line=target_element.lc.line,
-                    character=target_element.lc.col,
+            if (
+                lsp_range := utils.ast_node_to_range(matching_states[0])
+            ) is not None:
+                self.logger.debug(
+                    "found match at '%s', '%s", lsp_range.start, lsp_range.end
                 )
                 return types.Location(
-                    uri=inc, range=types.Range(start=pos, end=pos)
+                    uri=str(uri),
+                    range=lsp_range,
                 )
 
-        for inc in sls_file.includes:
-            recursive_match = self.find_id_in_includes(id_to_find, inc)
-            if recursive_match is not None:
-                return recursive_match
-
-        return None
-
-    def get_file_parsed_contents(self, uri: str) -> Optional[Any]:
-        """
-        Returns the contents of the file with the given uri de-serialized from
-        YAML.
-        If the contents cannot be de-serialized, then None is returned.
-        """
-        if uri in self._files:
-            try:
-                if uri in self._files:
-                    sls_file = self._files[uri]
-                    if sls_file.parsed_contents_stale:
-                        sls_file.reparse()
-                    return sls_file.parsed_contents
-            except Exception as err:
-                self.logger.error("Failed to parse YAML: %s", str(err))
-                self.show_message(
-                    "Failed parsing YAML: " + str(err),
-                    msg_type=types.MessageType.Error,
-                )
-                return None
-        return None
-
-    def get_sls_file(self, uri: str) -> Optional[SlsFile]:
-        if uri in self._files:
-            return self._files[uri]
         return None
 
 
