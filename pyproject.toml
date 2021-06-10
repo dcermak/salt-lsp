@@ -6,6 +6,7 @@ authors = ["Dan Čermák <dcermak@suse.com>", "Cédric Bosdonnat <cbosdonnat@sus
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
+# remove the compat code from salt_lsp/workspace.py once we drop python 3.8 support
 python = "^3.8"
 pygls = "^0.10.2"
 "ruamel.yaml" = "^0.17.7"
