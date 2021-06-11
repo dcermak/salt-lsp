@@ -42,12 +42,12 @@
     "vscode:prepublish": "tsc -p ./",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install",
-    "vscode": "yarn run vscode:prepublish && VSCODE=$(which code-insiders || which code || echo echo ERROR: neither the code nor code-insiders vscode executable is installed); USER=dummy-dont-share-vscode-instance $VSCODE --user-data-dir=$PWD/.vscode-dev/user-data --extensionHomePath=$PWD/.vscode-dev/extensions --extensionDevelopmentPath=$PWD $*"
+    "package": "vsce package --yarn"
   },
   "devDependencies": {
     "@types/node": "^14",
     "typescript": "^4",
+    "vsce": "^1.93",
     "vscode": "^1.1.36"
   },
   "dependencies": {

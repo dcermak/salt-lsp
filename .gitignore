@@ -133,3 +133,4 @@ clients/vscode/out/
 .env3/
 
 salt_lsp/data/states.pickle
+*.vsix
