@@ -16,20 +16,17 @@
       {
         "id": "sls",
         "aliases": ["SaltStack", "salt", "pillar"],
-        "extensions": [".sls"],
-        "configuration": "./jinja.configuration.json"
+        "extensions": [".sls"]
       },
       {
         "id": "tst",
         "aliases": ["SaltStack", "salt", "saltcheck"],
-        "extensions": [".tst"],
-        "configuration": "./jinja.configuration.json"
+        "extensions": [".tst"]
       },
       {
         "id": "jinja",
         "aliases": ["j2", "jinja2"],
-        "extensions": [".jinja", ".j2"],
-        "configuration": "./jinja.configuration.json"
+        "extensions": [".jinja", ".j2"]
       }
     ]
   },
