@@ -16,14 +16,55 @@
  * limitations under the License.
  * ----------------------------------------------------------------------- */
 
+import { spawn } from "child_process";
 import * as net from "net";
-import * as path from "path";
-import { ExtensionContext, workspace } from "vscode";
+import { ExtensionContext, window, workspace } from "vscode";
 import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
 } from "vscode-languageclient/node";
+
+class ProcessError extends Error {
+  constructor(
+    public readonly command: string,
+    public readonly returnCode: number | null,
+    public readonly stdout: any[],
+    public readonly stderr: any[]
+  ) {
+    super(
+      `${command} failed with code=${
+        returnCode ?? "null"
+      }, stdout='${stdout.join("\n")}', stderr='${stderr.join("\n")}'`
+    );
+  }
+}
+
+export function runProcess(
+  command: string,
+  args?: readonly string[]
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args);
+
+    const stdout: any[] = [];
+    const stderr: any[] = [];
+
+    child.stdout.on("data", (data) => stdout.push(data));
+    child.stderr.on("data", (data) => stderr.push(data));
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve(stdout.join(""));
+      } else {
+        reject(new ProcessError(command, code, stdout, stderr));
+      }
+    });
+
+    child.on("error", (err) => {
+      reject(err);
+    });
+  });
+}
 
 let client: LanguageClient;
 
@@ -71,36 +112,47 @@ function startLangServerTCP(addr: number): LanguageClient {
   );
 }
 
-function startLangServer(
-  command: string,
-  args: string[],
-  cwd: string
-): LanguageClient {
+function startLangServer(command: string, args: string[]): LanguageClient {
   const serverOptions: ServerOptions = {
     args,
     command,
-    options: { cwd },
   };
 
   return new LanguageClient(command, serverOptions, getClientOptions());
 }
 
-export function activate(context: ExtensionContext) {
+export async function activate(context: ExtensionContext): Promise<void> {
   if (isStartedInDebugMode()) {
-    // Development - Run the server manually
     client = startLangServerTCP(2087);
   } else {
-    // Production - Client is going to run the server (for use within `.vsix` package)
-    const cwd = path.join(__dirname, "..", "..");
     const pythonPath = workspace
       .getConfiguration("python")
       .get<string>("pythonPath");
 
-    if (!pythonPath) {
-      throw new Error("`python.pythonPath` is not set");
+    if (pythonPath === undefined) {
+      try {
+        await runProcess("python3", ["--version"]);
+      } catch {
+        const errMsg =
+          "'python.pythonPath' not set and could not launch python. Please install python to be able to use this Language Server";
+        await window.showErrorMessage(errMsg);
+        throw new Error(errMsg);
+      }
     }
 
-    client = startLangServer(pythonPath, ["lsp_server.py"], cwd);
+    const python = pythonPath ?? "python3";
+
+    try {
+      await runProcess(python, ["-m", "salt_lsp", "--stop-after-init"]);
+    } catch (exc) {
+      const errMsg = `Could not launch the Salt Language Server, got the following error: ${exc.toString()}.
+
+You might have to install salt_lsp via 'pip install salt_lsp'.`;
+      await window.showErrorMessage(errMsg);
+      throw new Error(errMsg);
+    }
+
+    client = startLangServer(python, ["-m", "salt_lsp"]);
   }
 
   context.subscriptions.push(client.start());
