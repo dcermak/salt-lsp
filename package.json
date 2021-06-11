@@ -1,11 +1,18 @@
 {
-  "name": "json-extension",
-  "description": "",
-  "author": "Cédric & Dan",
+  "name": "salt-lsp",
+  "description": "Salt Language Server Protocol Server",
+  "contributors": [
+    {
+      "name": "Cédric Bosdonnat"
+    },
+    {
+      "name": "Dan Čermák"
+    }
+  ],
+  "publisher": "dancermak",
   "repository": "https://github.com/dcermak/salt-lsp",
   "license": "Apache-2.0",
   "version": "0.0.1",
-  "publisher": "Cédric & Dan",
   "engines": {
     "vscode": "^1.50.0"
   },
