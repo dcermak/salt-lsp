@@ -1,8 +1,6 @@
 from types import SimpleNamespace
 
-from salt_lsp.server import salt_server
-
-from conftest import FILE_NAME_COMPLETER, MODULE_DOCS
+from conftest import MODULE_DOCS
 
 
 TEST_FILE = """saltmaster.packages:
@@ -21,30 +19,27 @@ git -C /srv/salt pull -q:
 """
 
 
-salt_server.post_init(FILE_NAME_COMPLETER)
+def test_complete_of_file(salt_client_server, file_name_completer):
+    _, server = salt_client_server
+    txt_doc = {
+        "text_document": SimpleNamespace(
+            uri="foo.sls", text=TEST_FILE, version=0
+        ),
+    }
+    server.workspace.put_document(txt_doc["text_document"])
 
-
-class TestStateNameCompletion:
-    def test_complete_of_file(self):
-        txt_doc = {
-            "text_document": SimpleNamespace(
-                uri="foo.sls", text=TEST_FILE, version=0
-            ),
-        }
-        salt_server.register_file(SimpleNamespace(**txt_doc))
-
-        completions = salt_server.complete_state_name(
-            SimpleNamespace(
-                **{
-                    **txt_doc,
-                    "position": SimpleNamespace(line=6, character=7),
-                    "context": SimpleNamespace(trigger_character="."),
-                }
-            )
+    completions = server.complete_state_name(
+        SimpleNamespace(
+            **{
+                **txt_doc,
+                "position": SimpleNamespace(line=6, character=7),
+                "context": SimpleNamespace(trigger_character="."),
+            }
         )
+    )
 
-        expected_completions = [
-            (submod_name, MODULE_DOCS[f"file.{submod_name}"])
-            for submod_name in FILE_NAME_COMPLETER["file"].state_sub_names
-        ]
-        assert completions == expected_completions
+    expected_completions = [
+        (submod_name, MODULE_DOCS[f"file.{submod_name}"])
+        for submod_name in file_name_completer["file"].state_sub_names
+    ]
+    assert completions == expected_completions

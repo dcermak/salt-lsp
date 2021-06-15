@@ -4,17 +4,27 @@ Utility functions to extract data from the files
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 import os
 import os.path
 import shlex
 import subprocess
-from typing import Iterator, List, NewType, Optional, TypeVar, Union
+from typing import (
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    NewType,
+    Optional,
+    TypeVar,
+    Union,
+)
 from urllib.parse import urlparse, ParseResult
 
 from pygls.lsp.types import Position, Range
 
 import salt_lsp.parser as parser
-from salt_lsp.parser import AstNode
+from salt_lsp.parser import AstNode, Tree
 
 
 def get_git_root(path: str) -> Optional[str]:
@@ -68,14 +78,11 @@ def get_sls_includes(path: str) -> List[str]:
     return sls_files
 
 
-def construct_path_to_position(
-    document: str, pos: Position
-) -> List[parser.AstNode]:
-    tree = parser.parse(document)
+def construct_path_to_position(tree: Tree, pos: Position) -> List[AstNode]:
     found_node = None
     parser_pos = parser.Position(line=pos.line, col=pos.character)
 
-    def visitor(node: parser.AstNode) -> bool:
+    def visitor(node: AstNode) -> bool:
         if parser_pos >= node.start and parser_pos < node.end:
             nonlocal found_node
             found_node = node
@@ -86,8 +93,8 @@ def construct_path_to_position(
     if not found_node:
         return []
 
-    context: List[parser.AstNode] = []
-    node: Optional[parser.AstNode] = found_node
+    context: List[AstNode] = []
+    node: Optional[AstNode] = found_node
     while node:
         context.insert(0, node)
         node = node.parent
@@ -137,6 +144,37 @@ class FileUri:
 
     def __str__(self) -> str:
         return self._parse_res.geturl()
+
+
+U = Union[Uri, FileUri, str]
+
+
+class UriDict(Generic[T], MutableMapping):
+    """Dictionary that stores elements assigned to paths which are then
+    transparently accessible via their Uri or the path or the FileUri.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self._data: Dict[str, T] = dict()
+        self.update(dict(*args, **kwargs))
+
+    def __getitem__(self, key: U) -> T:
+        return self._data[self._key_gen(key)]
+
+    def __setitem__(self, key: U, value: T) -> None:
+        self._data[self._key_gen(key)] = value
+
+    def __delitem__(self, key: U) -> None:
+        del self._data[self._key_gen(key)]
+
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
+
+    def _key_gen(self, key: U) -> str:
+        return str(FileUri(key))
 
 
 def is_valid_file_uri(uri: str) -> bool:

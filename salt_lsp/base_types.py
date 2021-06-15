@@ -2,6 +2,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 
+SLS_LANGUAGE_ID = "sls"
+
+
 @dataclass(frozen=True)
 class StateParameters:
     parameters: Any

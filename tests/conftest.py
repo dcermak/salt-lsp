@@ -1,6 +1,24 @@
+import asyncio
+from threading import Thread
+import os
+
+from pygls.lsp.methods import (
+    EXIT,
+    INITIALIZE,
+    TEXT_DOCUMENT_DID_OPEN,
+    SHUTDOWN,
+)
+from pygls.lsp.types import (
+    ClientCapabilities,
+    InitializeParams,
+    DidOpenTextDocumentParams,
+    TextDocumentItem,
+)
+from pygls.server import LanguageServer
 import pytest
 
 from salt_lsp.base_types import StateNameCompletion
+from salt_lsp.server import SaltServer, setup_salt_server_capabilities
 
 
 MODULE_DOCS = {
@@ -451,6 +469,9 @@ FILE_NAME_COMPLETER = {
 }
 
 
+CALL_TIMEOUT = 5
+
+
 @pytest.fixture
 def file_name_completer():
     return {
@@ -460,3 +481,174 @@ def file_name_completer():
             MODULE_DOCS,
         )
     }
+
+
+@pytest.fixture
+def salt_client_server():
+    scr, scw = os.pipe()
+    csr, csw = os.pipe()
+
+    server = SaltServer()
+    setup_salt_server_capabilities(server)
+    server.post_init(FILE_NAME_COMPLETER)
+
+    server_thread = Thread(
+        target=server.start_io,
+        args=(os.fdopen(csr, "rb"), os.fdopen(scw, "wb")),
+    )
+    server_thread.daemon = True
+    client = LanguageServer(asyncio.new_event_loop())
+    client_thread = Thread(
+        target=client.start_io,
+        args=(os.fdopen(scr, "rb"), os.fdopen(csw, "wb")),
+    )
+    client_thread.daemon = True
+
+    server_thread.start()
+    server.thread_id = server_thread.ident
+
+    client_thread.start()
+
+    response = client.lsp.send_request(
+        INITIALIZE,
+        InitializeParams(
+            process_id=12345,
+            root_uri="file://",
+            capabilities=ClientCapabilities(),
+        ),
+    ).result(timeout=CALL_TIMEOUT)
+
+    assert "capabilities" in response
+
+    yield client, server
+
+    shutdown_response = client.lsp.send_request(SHUTDOWN).result(
+        timeout=CALL_TIMEOUT
+    )
+    assert shutdown_response is None
+
+    # exit the server
+    client.lsp.notify(EXIT)
+    server_thread.join()
+
+    # exit the client
+    client._stop_event.set()
+    try:
+        client.loop._signal_handlers.clear()  # HACK ?
+    except AttributeError:
+        pass
+    client_thread.join()
+
+
+@pytest.fixture()
+def sample_workspace(tmp_path):
+    with open(tmp_path / "top.sls", "w") as topfile:
+        topfile.write(
+            """base:
+  '*':
+    - opensuse
+"""
+        )
+
+    opensuse = tmp_path / "opensuse"
+    (tmp_path / "opensuse").mkdir(parents=True)
+    with open(opensuse / "init.sls", "w") as initfile:
+        initfile.write(
+            """include:
+  - dns.server
+
+root:
+  user.present
+"""
+        )
+
+    with open(opensuse / "base.sls", "w") as base_sls:
+        base_sls.write(
+            """bernd:
+  user.present:
+    - fullname: Bernhardt
+    - home: /home/bernd
+
+/home/bernd/.bashrc:
+  file.managed:
+    - source: salt://opensuse/bash
+    - require:
+      - user: bernd
+"""
+        )
+
+    dns_server = tmp_path / "dns" / "server"
+    dns_server.mkdir(parents=True)
+
+    with open(dns_server / "init.sls", "w") as initfile:
+        initfile.write(
+            """/disk:
+  mount.mounted:
+    - fstype: zfs
+"""
+        )
+
+    # from:
+    # https://docs.saltproject.io/en/latest/ref/states/compiler_ordering.html#the-include-statement
+    with open(tmp_path / "foo.sls", "w") as foo_sls:
+        foo_sls.write(
+            """include:
+  - bar
+  - baz
+"""
+        )
+    with open(tmp_path / "bar.sls", "w") as bar_sls:
+        bar_sls.write(
+            """include:
+  - quo
+"""
+        )
+    with open(tmp_path / "baz.sls", "w") as baz_sls:
+        baz_sls.write(
+            """include:
+  - qux
+"""
+        )
+
+    with open(tmp_path / "quo.sls", "w") as quo_file:
+        quo_file.write(
+            """/root/.fishrc:
+  file.managed:
+    - user: root
+    - group: root
+    - require:
+      - user: root
+"""
+        )
+
+    yield tmp_path
+
+
+def open_workspace(
+    client: LanguageServer, root_uri: str, request_timeout: int = 5
+) -> None:
+    client.lsp.send_request(
+        INITIALIZE,
+        InitializeParams(
+            process_id=12345,
+            root_uri=root_uri,
+            capabilities=ClientCapabilities(),
+        ),
+    ).result(timeout=request_timeout)
+
+
+def open_file(
+    client: LanguageServer, file_path: str, request_timeout: int = 5
+) -> None:
+    with open(file_path) as base_sls:
+        client.lsp.send_request(
+            TEXT_DOCUMENT_DID_OPEN,
+            DidOpenTextDocumentParams(
+                text_document=TextDocumentItem(
+                    uri="file://" + file_path,
+                    language_id="sls",
+                    version=0,
+                    text=base_sls.read(-1),
+                )
+            ),
+        ).result(timeout=request_timeout)
