@@ -15,7 +15,7 @@ Salt Language Server Protocol Server
 - VSCode (required for live testing the server from an editor)
 
 
-## Setup
+## Server Setup
 
 Install the dependencies:
 
@@ -35,10 +35,41 @@ Start the server:
 $ poetry run salt_lsp_server --tcp
 ```
 
-Launch the client:
+Install the server:
+```ShellSession
+$ poetry build
+$ pip install --user --force-reinstall dist/salt_lsp-0.0.1*whl
+```
+
+# Clients
+
+## VSCode
 
 1. Run `yarn install`
 2. Start VSCode and open this directory as the server
 3. Open the Debug menu (Ctrl + Shift + D)
 4. Select "Launch Client" drop down
 5. Press F5
+
+
+## Emacs
+
+You should install [salt-mode](https://github.com/glynnforrest/salt-mode) so
+that `sls` files are registered to the salt major mode. The language server must
+be installed on your system so that the clients can launch it.
+
+### Using lsp-mode
+
+1. Install & configure [lsp-mode](https://github.com/emacs-lsp/lsp-mode/)
+2. Load the file `clients/emacs/salt-lsp.el`
+3. Open a sls file and launch `lsp` via `M-x lsp`
+
+
+### Using eglot
+
+1. Install & configure [eglot](https://github.com/joaotavora/eglot)
+2. Evaluate the following snippet:
+```elisp
+(add-to-list 'eglot-server-programs '(salt-mode . ("python3" "-m" "salt_lsp")))
+```
+3. Launch eglot via `M-x eglot`
