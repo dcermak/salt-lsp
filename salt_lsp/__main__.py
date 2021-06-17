@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import argparse
 import logging
 import pickle
@@ -8,6 +6,7 @@ from typing import Dict
 
 from salt_lsp.server import SaltServer, setup_salt_server_capabilities
 from salt_lsp.base_types import StateNameCompletion
+
 
 LOG_LEVEL_DICT: Dict[str, int] = {
     "critical": logging.CRITICAL,

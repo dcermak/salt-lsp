@@ -40,8 +40,16 @@ jobs:
 
       - name: generate the cached completion data and try to launch the server
         run: |
-          poetry run ./create_completion_classes.py
-          poetry run ./lsp_server.py --stop-after-init
+          poetry run dump_state_name_completions
+          poetry run salt_lsp_server --stop-after-init
+
+      - name: build the package, install it and launch the lsp server
+        run: |
+          poetry build
+          pip install --user --force-reinstall dist/*whl
+          mkdir tmp
+          pushd tmp
+          python -m salt_lsp --stop-after-init
 
   lint:
     name: lint and format
@@ -60,10 +68,10 @@ jobs:
         run: poetry install
 
       - name: run black
-        run: poetry run black --check --diff salt_lsp/*py tests/*py *py
+        run: poetry run black --check --diff salt_lsp/*py tests/*py
 
       - name: run mypy
-        run: poetry run mypy salt_lsp/*py *py
+        run: poetry run mypy salt_lsp/*py
 
       - name: run pylint
-        run: poetry run pylint --fail-under 9.2 salt_lsp/*py *py
+        run: poetry run pylint --fail-under 9.2 salt_lsp/*py

@@ -1,25 +1,23 @@
-#!/usr/bin/env python3
 import subprocess
 import shlex
 import json
+import pathlib
 import pickle
 import tempfile
-from os import mkdir
-from os.path import join, abspath, dirname
+from os.path import abspath, dirname
 from typing import Dict
 
 from salt_lsp.base_types import StateNameCompletion
 
 
-if __name__ == "__main__":
-
+def dump_state_name_completions() -> None:
     state_completions: Dict[str, StateNameCompletion] = {}
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        salt_dest = join(tmpdirname, "salt")
-        minion_conf_file = join(salt_dest, "minion")
-        mkdir(salt_dest)
-        with open(minion_conf_file, "w") as minion_file:
+        salt_dest = pathlib.Path(tmpdirname) / "salt"
+        salt_dest.mkdir()
+
+        with open(salt_dest / "minion", "w") as minion_file:
             minion_file.write(f"root_dir: {tmpdirname}")
 
         mod_list, docs = (
@@ -44,8 +42,9 @@ if __name__ == "__main__":
                 module, mod_list["local"][module], docs["local"]
             )
 
-    with open(
-        join(dirname(abspath(__file__)), "data", "states.pickle"),
-        "wb",
-    ) as states_file:
+    dest_dir = pathlib.Path(dirname(abspath(__file__))) / "data"
+    if not dest_dir.exists():
+        dest_dir.mkdir()
+
+    with open(dest_dir / "states.pickle", "wb") as states_file:
         pickle.dump(state_completions, states_file)
