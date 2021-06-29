@@ -4,6 +4,8 @@
 [![VSCode Extension Build](https://github.com/dcermak/salt-lsp/actions/workflows/vscode_extension.yml/badge.svg)](https://github.com/dcermak/salt-lsp/actions/workflows/vscode_extension.yml)
 [![Code Coverage](https://img.shields.io/codecov/c/github/dcermak/salt-lsp)](https://app.codecov.io/gh/dcermak/salt-lsp)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://black.readthedocs.io/en/stable/)
+[![PyPI](https://img.shields.io/pypi/v/salt-lsp)](https://pypi.org/project/salt-lsp/)
+[![Visual Studio Marketplace](https://img.shields.io/visual-studio-marketplace/v/dancermak.salt-lsp)](https://marketplace.visualstudio.com/items?itemName=dancermak.salt-lsp)
 
 Salt Language Server Protocol Server
 
