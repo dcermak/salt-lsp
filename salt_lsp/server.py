@@ -10,8 +10,6 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union, cast
 from pygls.capabilities import COMPLETION
 from pygls.lsp import types
 from pygls.lsp.methods import (
-    TEXT_DOCUMENT_DID_CHANGE,
-    TEXT_DOCUMENT_DID_CLOSE,
     TEXT_DOCUMENT_DID_OPEN,
     DEFINITION,
     DOCUMENT_SYMBOL,
@@ -218,25 +216,6 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
 
         return salt_server.find_id_in_doc_and_includes(id_to_find, uri)
 
-    @server.feature(TEXT_DOCUMENT_DID_CHANGE)
-    def on_did_change(
-        salt_server: SaltServer, params: types.DidChangeTextDocumentParams
-    ):
-        for change in params.content_changes:
-            # check that this is a types.TextDocumentContentChangeEvent
-            if hasattr(change, "range"):
-                assert isinstance(change, types.TextDocumentContentChangeEvent)
-                salt_server.workspace.update_document(
-                    params.text_document, change
-                )
-
-    @server.feature(TEXT_DOCUMENT_DID_CLOSE)
-    def did_close(
-        salt_server: SaltServer, params: types.DidCloseTextDocumentParams
-    ):
-        """Text document did close notification."""
-        salt_server.workspace.remove_document(params.text_document.uri)
-
     @server.feature(TEXT_DOCUMENT_DID_OPEN)
     def did_open(
         salt_server: SaltServer, params: types.DidOpenTextDocumentParams
@@ -249,7 +228,6 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
             "adding text document '%s' to the workspace",
             params.text_document.uri,
         )
-        salt_server.workspace.put_document(params.text_document)
         doc = salt_server.workspace.get_document(params.text_document.uri)
         return types.TextDocumentItem(
             uri=params.text_document.uri,
