@@ -9,16 +9,16 @@ include = ["salt_lsp/data/states.pickle"]
 [tool.poetry.dependencies]
 # remove the compat code from salt_lsp/workspace.py once we drop python 3.8 support
 python = "^3.8"
-pygls = "^0.10.2"
-PyYAML = "^5.4"
+pygls = "^0.11.3"
+PyYAML = "^6"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2.3"
-pytest-cov = "^3.0.0"
-black = "^21.10b0"
-mypy = "^0.812"
-pylint = "^2.7.4"
-pyfakefs = "^4.4.0"
+pytest = ">=6.2.3"
+pytest-cov = ">=2.11.1"
+black = ">=21.10b0"
+mypy = ">=0.812"
+pylint = ">=2.7.4"
+pyfakefs = ">=4.4.0"
 salt = "^3003"
 pytest-testinfra = "^6.3.0"
 
