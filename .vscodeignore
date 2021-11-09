@@ -16,3 +16,6 @@ salt_lsp*/**
 tests/**
 pyproject.toml
 **/__pycache__/*
+.github/**
+.vscode/**
+.pytest_cache/**
