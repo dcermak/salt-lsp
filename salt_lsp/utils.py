@@ -23,7 +23,7 @@ from urllib.parse import urlparse, ParseResult
 
 from pygls.lsp.types import Position, Range
 
-import salt_lsp.parser as parser
+from salt_lsp import parser
 from salt_lsp.parser import AstNode, Tree
 
 
@@ -83,7 +83,7 @@ def construct_path_to_position(tree: Tree, pos: Position) -> List[AstNode]:
     parser_pos = parser.Position(line=pos.line, col=pos.character)
 
     def visitor(node: AstNode) -> bool:
-        if parser_pos >= node.start and parser_pos < node.end:
+        if node.start <= parser_pos < node.end:
             nonlocal found_node
             found_node = node
         return True
@@ -133,7 +133,7 @@ class FileUri:
         self._parse_res: ParseResult = (
             uri._parse_res if isinstance(uri, FileUri) else urlparse(uri)
         )
-        if self._parse_res.scheme != "" and self._parse_res.scheme != "file":
+        if self._parse_res.scheme not in ("", "file"):
             raise ValueError(f"Invalid uri scheme {self._parse_res.scheme}")
         if self._parse_res.scheme == "":
             self._parse_res = urlparse("file://" + self._parse_res.path)
@@ -155,7 +155,7 @@ class UriDict(Generic[T], MutableMapping):
     """
 
     def __init__(self, *args, **kwargs):
-        self._data: Dict[str, T] = dict()
+        self._data: Dict[str, T] = {}
         self.update(dict(*args, **kwargs))
 
     def __getitem__(self, key: U) -> T:

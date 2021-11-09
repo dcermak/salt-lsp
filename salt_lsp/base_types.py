@@ -46,10 +46,10 @@ class StateNameCompletion:
 
         The documentation is not guaranteed to be present and can be None.
         """
-        return list(
-            (key, self.state_params[key].documentation)
-            for key in self.state_params
-        )
+        return [
+            (name, state_params.documentation)
+            for name, state_params in self.state_params.items()
+        ]
 
     def provide_param_completion(self, submod_name: str) -> List[str]:
         return list(self.state_params[submod_name].parameters.keys())

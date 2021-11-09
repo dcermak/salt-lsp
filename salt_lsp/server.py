@@ -10,8 +10,6 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union, cast
 from pygls.capabilities import COMPLETION
 from pygls.lsp import types
 from pygls.lsp.methods import (
-    TEXT_DOCUMENT_DID_CHANGE,
-    TEXT_DOCUMENT_DID_CLOSE,
     TEXT_DOCUMENT_DID_OPEN,
     DEFINITION,
     DOCUMENT_SYMBOL,
@@ -24,7 +22,7 @@ from pygls.lsp.types import (
 )
 from pygls.server import LanguageServer
 
-import salt_lsp.utils as utils
+from salt_lsp import utils
 from salt_lsp.base_types import StateNameCompletion, SLS_LANGUAGE_ID
 from salt_lsp.workspace import SaltLspProto, SlsFileWorkspace
 from salt_lsp.parser import (
@@ -61,6 +59,8 @@ class SaltServer(LanguageServer):
         state_name_completions: Dict[str, StateNameCompletion],
         log_level=logging.DEBUG,
     ) -> None:
+        """Further initialisation, called after
+        setup_salt_server_capabilities."""
         self._state_name_completions = state_name_completions
         self._state_names = list(state_name_completions.keys())
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -69,6 +69,7 @@ class SaltServer(LanguageServer):
     def complete_state_name(
         self, params: types.CompletionParams
     ) -> List[Tuple[str, Optional[str]]]:
+        """Complete state name at current position"""
         assert (
             params.context is not None
             and params.context.trigger_character == "."
@@ -218,25 +219,6 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
 
         return salt_server.find_id_in_doc_and_includes(id_to_find, uri)
 
-    @server.feature(TEXT_DOCUMENT_DID_CHANGE)
-    def on_did_change(
-        salt_server: SaltServer, params: types.DidChangeTextDocumentParams
-    ):
-        for change in params.content_changes:
-            # check that this is a types.TextDocumentContentChangeEvent
-            if hasattr(change, "range"):
-                assert isinstance(change, types.TextDocumentContentChangeEvent)
-                salt_server.workspace.update_document(
-                    params.text_document, change
-                )
-
-    @server.feature(TEXT_DOCUMENT_DID_CLOSE)
-    def did_close(
-        salt_server: SaltServer, params: types.DidCloseTextDocumentParams
-    ):
-        """Text document did close notification."""
-        salt_server.workspace.remove_document(params.text_document.uri)
-
     @server.feature(TEXT_DOCUMENT_DID_OPEN)
     def did_open(
         salt_server: SaltServer, params: types.DidOpenTextDocumentParams
@@ -249,7 +231,6 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
             "adding text document '%s' to the workspace",
             params.text_document.uri,
         )
-        salt_server.workspace.put_document(params.text_document)
         doc = salt_server.workspace.get_document(params.text_document.uri)
         return types.TextDocumentItem(
             uri=params.text_document.uri,
@@ -264,6 +245,6 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
     ) -> Optional[
         Union[List[types.DocumentSymbol], List[types.SymbolInformation]]
     ]:
-        return salt_server.workspace._document_symbols.get(
+        return salt_server.workspace.document_symbols.get(
             params.text_document.uri, []
         )
