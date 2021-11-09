@@ -33,7 +33,7 @@ jobs:
         run: poetry run pytest
 
       - name: upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2.1.0
         with:
           fail_ci_if_error: false
           flags: "unittests,python-${{ matrix.python-version }}"
