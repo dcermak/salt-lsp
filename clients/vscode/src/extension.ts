@@ -145,7 +145,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
     try {
       await runProcess(python, ["-m", "salt_lsp", "--stop-after-init"]);
     } catch (exc) {
-      const errMsg = `Could not launch the Salt Language Server, got the following error: ${exc.toString()}.
+      const errMsg = `Could not launch the Salt Language Server, got the following error: ${(
+        exc as ProcessError
+      ).toString()}.
 
 You might have to install salt_lsp via 'pip install salt_lsp'.`;
       await window.showErrorMessage(errMsg);

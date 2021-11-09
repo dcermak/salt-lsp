@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9']
+        python-version: ['3.8', '3.9', '3.10']
     name: run tests for python ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v2
@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: Gr1N/setup-poetry@v4
+      - uses: Gr1N/setup-poetry@v7
       - uses: actions/cache@v2
         with:
           path: ~/.cache/pypoetry/virtualenvs
@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
 
-      - uses: Gr1N/setup-poetry@v4
+      - uses: Gr1N/setup-poetry@v7
       - uses: actions/cache@v2
         with:
           path: ~/.cache/pypoetry/virtualenvs
