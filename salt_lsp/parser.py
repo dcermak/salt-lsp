@@ -79,9 +79,11 @@ class AstMapNode(AstNode, ABC):
     """
 
     @abstractmethod
-    def add(self: AstMapNode) -> AstNode:
+    def add(self: AstMapNode, child: Optional[AstNode] = None) -> AstNode:
         """
         Abstract function to add an item
+
+        :param child: the node to add. If None the default node type will be added
         """
         raise NotImplementedError()
 
