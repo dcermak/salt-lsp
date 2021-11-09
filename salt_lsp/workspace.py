@@ -200,8 +200,8 @@ class SaltLspProto(LanguageServerProtocol):
 
     workspace: SlsFileWorkspace
 
-    def bf_initialize(self, *args, **kwargs) -> InitializeResult:
-        res = super().bf_initialize(*args, **kwargs)
+    def lsp_initialize(self, *args, **kwargs) -> InitializeResult:
+        res = super().lsp_initialize(*args, **kwargs)
         ws = self.workspace
         self.workspace = SlsFileWorkspace(
             self._server._state_name_completions,
