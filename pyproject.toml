@@ -21,6 +21,7 @@ pylint = ">=2.7.4"
 pyfakefs = ">=4.4.0"
 salt = "^3003"
 pytest-testinfra = "^6.3.0"
+types-PyYAML = "^6"
 
 [tool.poetry.scripts]
 salt_lsp_server = 'salt_lsp.__main__:main'
