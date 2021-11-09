@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union, cast
 from pygls.capabilities import COMPLETION
 from pygls.lsp import types
 from pygls.lsp.methods import (
+    INITIALIZE,
     TEXT_DOCUMENT_DID_OPEN,
     DEFINITION,
     DOCUMENT_SYMBOL,
@@ -19,6 +20,8 @@ from pygls.lsp.types import (
     CompletionList,
     CompletionOptions,
     CompletionParams,
+    InitializeParams,
+    InitializeResult,
 )
 from pygls.server import LanguageServer
 
@@ -157,6 +160,10 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
     """Adds the completion, goto definition and document symbol capabilities to
     the provided server.
     """
+
+    @server.feature(INITIALIZE)
+    def initialize(initialization_params: InitializeParams) -> InitializeResult:
+        return server.lsp.lsp_initialize(initialization_params)
 
     @server.feature(
         COMPLETION, CompletionOptions(trigger_characters=["-", "."])
