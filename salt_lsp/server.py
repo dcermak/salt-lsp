@@ -22,7 +22,7 @@ from pygls.lsp.types import (
 )
 from pygls.server import LanguageServer
 
-import salt_lsp.utils as utils
+from salt_lsp import utils
 from salt_lsp.base_types import StateNameCompletion, SLS_LANGUAGE_ID
 from salt_lsp.workspace import SaltLspProto, SlsFileWorkspace
 from salt_lsp.parser import (
@@ -59,6 +59,8 @@ class SaltServer(LanguageServer):
         state_name_completions: Dict[str, StateNameCompletion],
         log_level=logging.DEBUG,
     ) -> None:
+        """Further initialisation, called after
+        setup_salt_server_capabilities."""
         self._state_name_completions = state_name_completions
         self._state_names = list(state_name_completions.keys())
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -67,6 +69,7 @@ class SaltServer(LanguageServer):
     def complete_state_name(
         self, params: types.CompletionParams
     ) -> List[Tuple[str, Optional[str]]]:
+        """Complete state name at current position"""
         assert (
             params.context is not None
             and params.context.trigger_character == "."
@@ -242,6 +245,6 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
     ) -> Optional[
         Union[List[types.DocumentSymbol], List[types.SymbolInformation]]
     ]:
-        return salt_server.workspace._document_symbols.get(
+        return salt_server.workspace.document_symbols.get(
             params.text_document.uri, []
         )
