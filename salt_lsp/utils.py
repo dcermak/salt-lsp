@@ -83,9 +83,10 @@ def construct_path_to_position(tree: Tree, pos: Position) -> List[AstNode]:
     parser_pos = parser.Position(line=pos.line, col=pos.character)
 
     def visitor(node: AstNode) -> bool:
-        if node.start <= parser_pos < node.end:
-            nonlocal found_node
-            found_node = node
+        if node.start is not None and node.end is not None:
+            if node.start <= parser_pos < node.end:
+                nonlocal found_node
+                found_node = node
         return True
 
     tree.visit(visitor)
