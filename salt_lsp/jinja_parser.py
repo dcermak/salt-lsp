@@ -9,7 +9,8 @@ import jinja2
 import logging
 import re
 
-from salt_lsp.parser import Position, AstNode, AstMapNode
+from salt_lsp.parser import Position, AstNode, AstMapNode, Tree
+from salt_lsp.parser import parse as yaml_parse
 
 log = logging.getLogger(__name__)
 
@@ -330,3 +331,20 @@ def compile(tree: BranchNode) -> Tuple[str, Dict[Tuple[int, int], AstNode]]:
     visitor = CompileVisitor()
     tree.visit(visitor)
     return (visitor.document, visitor.pos_map)
+
+
+def merge_sls(jinja_ast: BranchNode) -> Tree:
+    """
+    Compile the Jinja AST with compiled SLS to create a single tree
+    """
+    yaml_doc, pos_map = compile(jinja_ast)
+    sls_ast = yaml_parse(yaml_doc)
+
+    # TODO Walk through the SLS AST to replace the variable texts
+
+    # TODO Walk through the SLS AST and insert nodes when finding something in pos_map
+    # TODO When finding a BranchNode: also add the parent BlockNode if any and not already added.
+    #           also update the end position of the last YAML node
+    # TODO When finding a BlockNode: adjust the end position of the last YAML node
+
+    return sls_ast
