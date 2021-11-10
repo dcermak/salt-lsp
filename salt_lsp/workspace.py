@@ -7,7 +7,7 @@ from pathlib import Path
 from platform import python_version_tuple
 from typing import List, Optional, Union
 
-from pygls.lsp import types, InitializeResult
+from pygls.lsp import types
 from pygls.protocol import LanguageServerProtocol
 from pygls.workspace import Workspace
 
@@ -200,13 +200,17 @@ class SaltLspProto(LanguageServerProtocol):
 
     workspace: SlsFileWorkspace
 
-    def lsp_initialize(self, *args, **kwargs) -> InitializeResult:
-        res = super().lsp_initialize(*args, **kwargs)
-        ws = self.workspace
-        self.workspace = SlsFileWorkspace(
-            self._server._state_name_completions,
-            ws.root_uri,
-            self._server.sync_kind,
-            ws.folders.values(),
-        )
-        return res
+    def setup_custom_workspace(self):
+        """Replace self.workspace with an instance of SlsFileWorkspace
+
+        This function is only supposed to be called when handling an
+        INITIALIZE request.
+        """
+        if not isinstance(self.workspace, SlsFileWorkspace):
+            old_ws = self.workspace
+            self.workspace = SlsFileWorkspace(
+                self._server._state_name_completions,
+                old_ws.root_uri,
+                self._server.sync_kind,
+                old_ws.folders.values(),
+            )
