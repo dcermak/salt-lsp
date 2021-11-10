@@ -7,9 +7,9 @@ import re
 from os.path import basename
 from typing import Dict, List, Optional, Sequence, Tuple, Union, cast
 
-from pygls.capabilities import COMPLETION
 from pygls.lsp import types
 from pygls.lsp.methods import (
+    COMPLETION,
     INITIALIZE,
     TEXT_DOCUMENT_DID_OPEN,
     DEFINITION,
@@ -21,7 +21,6 @@ from pygls.lsp.types import (
     CompletionOptions,
     CompletionParams,
     InitializeParams,
-    InitializeResult,
 )
 from pygls.server import LanguageServer
 
@@ -162,8 +161,11 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
     """
 
     @server.feature(INITIALIZE)
-    def initialize(initialization_params: InitializeParams) -> InitializeResult:
-        return server.lsp.lsp_initialize(initialization_params)
+    def initialize(params: InitializeParams) -> None:
+        """Set up custom workspace."""
+        del params  # not needed
+        server.lsp.setup_custom_workspace()
+        server.logger.debug("Replaced workspace with SlsFileWorkspace")
 
     @server.feature(
         COMPLETION, CompletionOptions(trigger_characters=["-", "."])
