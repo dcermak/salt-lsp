@@ -255,3 +255,49 @@ def test_parse_unfinished_blocks():
     )
     tokens = jinja_parser.tokenize(content)
     assert jinja_parser.parse(tokens) == tree
+
+
+def test_compile():
+    content = """/etc/systemd/system/rootco-salt-backup.service:
+  file.managed:
+{% if pillar['user']|length() > 1 %}
+    - user: {{ pillar['user'] }}
+{% elif pillar['user']|length() == 1 %}
+    - user: bar
+{% else %}
+    - user: foo
+{% endif %}
+{% for group in pillar['groups']%}
+    - group: {{ group }}
+{%- else %}
+    - group: nobody
+{% endfor %}
+"""
+
+    ast = jinja_parser.parse(jinja_parser.tokenize(content))
+    document, pos_map = jinja_parser.compile(ast)
+    assert document == """/etc/systemd/system/rootco-salt-backup.service:
+  file.managed:
+
+    - user: ?? pillar['user'] ??
+
+    - user: bar
+
+    - user: foo
+
+
+    - group: ?? group ??
+
+    - group: nobody
+
+"""
+
+    assert { pos: (node.start, node.end) for pos, node in pos_map.items() } == {
+        (8, 0): (Position(2, 0), Position(8, 11)),
+        (2, 0): (Position(2, 0), Position(4, 0)),
+        (4, 0): (Position(4, 0), Position(6, 0)),
+        (6, 0): (Position(6, 0), Position(8, 0)),
+        (9, 0): (Position(9, 0), Position(11, 0)),
+        (11, 0): (Position(11, 0), Position(13, 0)),
+        (13, 0): (Position(9, 0), Position(13, 12))
+    }

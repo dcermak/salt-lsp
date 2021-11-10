@@ -4,7 +4,7 @@ Module providing a fault-tolerant and simplified jinja2 parser
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Sequence
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 import jinja2
 import logging
 import re
@@ -131,6 +131,16 @@ class BlockNode(AstMapNode):
     def get_children(self: BlockNode) -> Sequence[AstMapNode]:
         return self.branches
 
+    def visit(self, visitor: Callable[[AstNode], bool]) -> None:
+        """
+        Override the default visit function to process the block after its children.
+        This is required to properly compile the block into a document since it is the
+        block end that is processed with it.
+        """
+        for child in self.get_children():
+            child.visit(visitor)
+        visitor(self)
+
     def add(self: BlockNode, child: BranchNode) -> BranchNode:
         assert isinstance(child, BranchNode)
         self.branches.append(child)
@@ -199,8 +209,11 @@ class BranchNode(AstMapNode):
         else:
             self.end = self.start
 
+        if not self.expression_end:
+            self.expression_end = self.end
 
-def parse(tokens: List[Token]) -> AstNode:
+
+def parse(tokens: List[Token]) -> BranchNode:
     """
     Parse Jinja tokens into a tree structure
     """
@@ -259,3 +272,61 @@ def parse(tokens: List[Token]) -> AstNode:
             node.close()
 
     return tree
+
+
+def index_to_position(text: str, index: int) -> Tuple[int, int]:
+    """
+    Convert a string index to a line/column position
+    """
+    split = text[0:index].splitlines()
+    if text[-1] == "\n":
+        split.append("")
+    return (len(split) - 1, len(split[-1])) if len(split) > 0 else (0, 0)
+
+
+@dataclass
+class CompileVisitor:
+    """
+    Stateful visitor generating a document and position mapping from the tree.
+    """
+
+    document: str = ""
+    pos_map: Dict[Tuple[int, int], AstNode] = field(default_factory=dict)
+
+    def __call__(self, node: AstNode) -> bool:
+        """
+        Actually visit the node
+        """
+        node_range = None
+
+        if isinstance(node, DataNode):
+            if node.data:
+                self.document += node.data
+        elif isinstance(node, VariableNode):
+            if node.expression:
+                # Replace the braces by question marks since those would break YAML parsing
+                self.document += re.sub("[{}]{2}", "??", node.expression)
+        elif isinstance(node, BranchNode):
+            # Don't add the expression, but position mapping
+            assert node.start and node.expression_end
+            if node.expression:
+                node_range = node
+        elif isinstance(node, BlockNode):
+            # Don't add the block end, but position mapping
+            assert node.block_end_start and node.end
+            node_range = node
+
+        if node_range:
+            doc_position = index_to_position(self.document, len(self.document))
+            self.pos_map[doc_position] = node_range
+
+        return True
+
+
+def compile(tree: BranchNode) -> Tuple[str, Dict[Tuple[int, int], AstNode]]:
+    """
+    Compile the jinja AST into a flat document with a position mapping
+    """
+    visitor = CompileVisitor()
+    tree.visit(visitor)
+    return (visitor.document, visitor.pos_map)
