@@ -705,7 +705,11 @@ class Parser:
             if token:
                 # Properly close the opened blocks
                 for node in reversed(self._breadcrumbs):
-                    if node.start and err.context_mark.column < node.start.col:
+                    if (
+                        node.start is not None
+                        and err.context_mark is not None
+                        and err.context_mark.column < node.start.col
+                    ):
                         self._process_token(
                             BlockEndToken(
                                 start_mark=err.context_mark,
@@ -713,7 +717,8 @@ class Parser:
                             )
                         )
                     elif (
-                        node.start
+                        node.start is not None
+                        and err.context_mark is not None
                         and err.context_mark.column == node.start.col
                     ):
                         self._process_token(
@@ -722,18 +727,19 @@ class Parser:
                                 end_mark=err.context_mark,
                             )
                         )
-                        value = self.document[
-                            err.context_mark.index : err.problem_mark.index
-                        ].strip("\r\n")
-                        error_token = ScalarToken(
-                            value=value,
-                            start_mark=err.context_mark,
-                            end_mark=err.problem_mark,
-                            plain=True,
-                            style=None,
-                        )
-                        self._process_token(error_token)
-                    else:
+                        if err.problem_mark is not None:
+                            value = self.document[
+                                err.context_mark.index : err.problem_mark.index
+                            ].strip("\r\n")
+                            error_token = ScalarToken(
+                                value=value,
+                                start_mark=err.context_mark,
+                                end_mark=err.problem_mark,
+                                plain=True,
+                                style=None,
+                            )
+                            self._process_token(error_token)
+                    elif err.problem_mark is not None:
                         node.end = Position(
                             line=err.problem_mark.line,
                             col=err.problem_mark.column,
