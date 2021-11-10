@@ -80,6 +80,7 @@ def test_parse():
     tree = jinja_parser.BranchNode(
         start=Position(0, 0),
         end=Position(5, 12),
+        expression_end=Position(5, 12),
         body=[
             jinja_parser.DataNode(
                 start=Position(0, 0),
@@ -148,6 +149,7 @@ def test_parse_unfinished_blocks():
     tree = jinja_parser.BranchNode(
         start=Position(0, 0),
         end=Position(12, 0),
+        expression_end=Position(12, 0),
         body=[
             jinja_parser.DataNode(
                 start=Position(0, 0),
