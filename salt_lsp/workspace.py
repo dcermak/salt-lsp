@@ -4,7 +4,7 @@ contents utilizing the existing Workspace implementation from pygls.
 """
 from logging import getLogger, Logger, DEBUG
 from pathlib import Path
-from platform import python_version_tuple
+import sys
 from typing import List, Optional, Union
 
 from pygls.lsp import types
@@ -17,7 +17,7 @@ from salt_lsp.parser import parse, Tree
 from salt_lsp.document_symbols import tree_to_document_symbols
 
 
-if int(python_version_tuple()[1]) <= 8:
+if sys.version_info[1] <= 8:
 
     def is_relative_to(p1: Path, p2: Path) -> bool:
         # stolen from CPython's source
