@@ -30,6 +30,7 @@ from salt_lsp.workspace import SaltLspProto, SlsFileWorkspace
 from salt_lsp.parser import (
     IncludesNode,
     RequisiteNode,
+    StateCallNode,
     StateParameterNode,
     Tree,
 )
@@ -67,6 +68,12 @@ class SaltServer(LanguageServer):
         self._state_names = list(state_name_completions.keys())
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(log_level)
+
+    def complete_state_params(self, state_module, module_function):
+        """Complete parameters for a state module function."""
+        return self._state_name_completions[
+            state_module
+        ].provide_param_completion(module_function)
 
     def complete_state_name(
         self, params: types.CompletionParams
@@ -174,6 +181,7 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
         salt_server: SaltServer, params: CompletionParams
     ) -> Optional[CompletionList]:
         """Returns completion items."""
+        # Try to complete state module.X
         if (
             params.context is not None
             and params.context.trigger_character == "."
@@ -200,12 +208,30 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
             or basename(params.text_document.uri) == "top.sls"
             and isinstance(path[-1], StateParameterNode)
         ):
+            # try to complete SLS file names
             file_path = utils.FileUri(params.text_document.uri).path
             includes = utils.get_sls_includes(file_path)
             return CompletionList(
                 is_incomplete=False,
                 items=[
                     CompletionItem(label=f" {include}") for include in includes
+                ],
+            )
+        elif path and isinstance(path[-1], StateParameterNode):
+            # Try to complete state module.fun parameters
+            state_call_node = path[-1].parent
+            if (
+                not isinstance(state_call_node, StateCallNode)
+                or state_call_node.name is None
+            ):
+                return None
+
+            mod, fun = state_call_node.name.split(".")
+            return CompletionList(
+                is_incomplete=False,
+                items=[
+                    CompletionItem(label=f" {param}: ")
+                    for param in salt_server.complete_state_params(mod, fun)
                 ],
             )
         return None
