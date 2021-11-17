@@ -15,7 +15,7 @@ PyYAML = "^5.4"
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
 pytest-cov = "^3.0.0"
-black = "^21.10b0"
+black = "^21.11b0"
 mypy = "^0.812"
 pylint = "^2.7.4"
 pyfakefs = "^4.4.0"
