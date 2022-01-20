@@ -28,7 +28,6 @@ if sys.version_info[1] <= 8:
         except ValueError:
             return False
 
-
 else:
 
     def is_relative_to(p1: Path, p2: Path) -> bool:
