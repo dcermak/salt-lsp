@@ -4,10 +4,10 @@ contents utilizing the existing Workspace implementation from pygls.
 """
 from logging import getLogger, Logger, DEBUG
 from pathlib import Path
-from platform import python_version_tuple
+import sys
 from typing import List, Optional, Union
 
-from pygls.lsp import types, InitializeResult
+from pygls.lsp import types
 from pygls.protocol import LanguageServerProtocol
 from pygls.workspace import Workspace
 
@@ -17,7 +17,7 @@ from salt_lsp.parser import parse, Tree
 from salt_lsp.document_symbols import tree_to_document_symbols
 
 
-if int(python_version_tuple()[1]) <= 8:
+if sys.version_info[1] <= 8:
 
     def is_relative_to(p1: Path, p2: Path) -> bool:
         # stolen from CPython's source
@@ -154,8 +154,7 @@ class SlsFileWorkspace(Workspace):
         self._resolve_includes(text_document.uri)
 
     def _get_workspace_of_document(self, uri: Union[str, FileUri]) -> FileUri:
-        for workspace in self._folders:
-            workspace_uri = workspace.uri
+        for workspace_uri in self._folders:
 
             if is_relative_to(
                 Path(FileUri(uri).path), Path(FileUri(workspace_uri).path)
@@ -200,13 +199,17 @@ class SaltLspProto(LanguageServerProtocol):
 
     workspace: SlsFileWorkspace
 
-    def bf_initialize(self, *args, **kwargs) -> InitializeResult:
-        res = super().bf_initialize(*args, **kwargs)
-        ws = self.workspace
-        self.workspace = SlsFileWorkspace(
-            self._server._state_name_completions,
-            ws.root_uri,
-            self._server.sync_kind,
-            ws.folders.values(),
-        )
-        return res
+    def setup_custom_workspace(self):
+        """Replace self.workspace with an instance of SlsFileWorkspace
+
+        This function is only supposed to be called when handling an
+        INITIALIZE request.
+        """
+        if not isinstance(self.workspace, SlsFileWorkspace):
+            old_ws = self.workspace
+            self.workspace = SlsFileWorkspace(
+                self._server._state_name_completions,
+                old_ws.root_uri,
+                self._server.sync_kind,
+                old_ws.folders.values(),
+            )
