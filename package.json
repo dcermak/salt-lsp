@@ -16,24 +16,46 @@
   "engines": {
     "vscode": "^1.50.0"
   },
-  "categories": ["Other"],
-  "activationEvents": ["onLanguage:sls"],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:sls"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "sls",
-        "aliases": ["SaltStack", "salt", "pillar"],
-        "extensions": [".sls"]
+        "aliases": [
+          "SaltStack",
+          "salt",
+          "pillar"
+        ],
+        "extensions": [
+          ".sls"
+        ]
       },
       {
         "id": "tst",
-        "aliases": ["SaltStack", "salt", "saltcheck"],
-        "extensions": [".tst"]
+        "aliases": [
+          "SaltStack",
+          "salt",
+          "saltcheck"
+        ],
+        "extensions": [
+          ".tst"
+        ]
       },
       {
         "id": "jinja",
-        "aliases": ["j2", "jinja2"],
-        "extensions": [".jinja", ".j2"]
+        "aliases": [
+          "j2",
+          "jinja2"
+        ],
+        "extensions": [
+          ".jinja",
+          ".j2"
+        ]
       }
     ]
   },
