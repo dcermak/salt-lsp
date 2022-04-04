@@ -15,7 +15,7 @@ jobs:
         python-version: ['3.8', '3.9', '3.10']
     name: run tests for python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3.1.0
         with:
           python-version: ${{ matrix.python-version }}
@@ -55,7 +55,7 @@ jobs:
     name: lint and format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-python@v3.1.0
 
       - uses: Gr1N/setup-poetry@v7
