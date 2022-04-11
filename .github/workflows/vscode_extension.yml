@@ -40,7 +40,7 @@ jobs:
       - run: yarn install || yarn install || yarn install
       - run: yarn run package
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ matrix.node-version == '14.x' }}
         with:
           name: salt-lsp.vsix.zip
