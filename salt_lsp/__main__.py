@@ -44,6 +44,10 @@ def add_arguments(parser):
         "(useful for debugging/testing purposes)",
     )
     parser.add_argument(
+        "--log-file",
+        help="Redirect logs to the given file instead of writing to stderr",
+    )
+    parser.add_argument(
         "--log-level",
         choices=list(LOG_LEVEL_DICT.keys())
         + list(map(lambda level: level.upper(), LOG_LEVEL_DICT.keys())),
@@ -60,7 +64,7 @@ def main():
 
     log_level = loglevel_from_str(args.log_level[0])
     logging.basicConfig(
-        filename="salt-server.log",
+        filename=args.log_file,
         level=log_level,
         filemode="w",
     )
@@ -72,7 +76,7 @@ def main():
 
     salt_server = SaltServer()
     setup_salt_server_capabilities(salt_server)
-    salt_server.post_init(states, log_level)
+    salt_server.post_init(states)
 
     if args.stop_after_init:
         return
