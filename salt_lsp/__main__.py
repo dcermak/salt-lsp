@@ -47,7 +47,7 @@ def add_arguments(parser):
         "--log-level",
         choices=list(LOG_LEVEL_DICT.keys())
         + list(map(lambda level: level.upper(), LOG_LEVEL_DICT.keys())),
-        default=["debug"],
+        default=["warning"],
         nargs=1,
         help="Logging verbosity",
     )
