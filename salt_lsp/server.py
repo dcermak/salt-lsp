@@ -228,7 +228,7 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
         if not isinstance(path[-1], RequisiteNode):
             return None
 
-        if (id_to_find := cast(RequisiteNode, path[-1]).reference) is None:
+        if (id_to_find := path[-1].reference) is None:
             return None
 
         return salt_server.find_id_in_doc_and_includes(id_to_find, uri)
