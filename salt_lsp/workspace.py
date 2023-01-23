@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 from typing import List, Optional, Union
 
-from pygls.lsp import types
+from lsprotocol import types
 from pygls.protocol import LanguageServerProtocol
 from pygls.workspace import Workspace
 
@@ -154,7 +154,6 @@ class SlsFileWorkspace(Workspace):
 
     def _get_workspace_of_document(self, uri: Union[str, FileUri]) -> FileUri:
         for workspace_uri in self._folders:
-
             if is_relative_to(
                 Path(FileUri(uri).path), Path(FileUri(workspace_uri).path)
             ):

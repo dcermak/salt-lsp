@@ -9,9 +9,7 @@ from salt_lsp.parser import (
 )
 from salt_lsp.utils import construct_path_to_position
 
-from pygls.lsp.types import (
-    Position,
-)
+from lsprotocol.types import Position
 
 
 MASTER_DOT_SLS = """saltmaster.packages:

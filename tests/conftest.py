@@ -2,17 +2,16 @@ import asyncio
 from threading import Thread
 import os
 
-from pygls.lsp.methods import (
+from lsprotocol.types import (
+    ClientCapabilities,
+    InitializeParams,
+    DidOpenTextDocumentParams,
+    InitializeResult,
+    TextDocumentItem,
     EXIT,
     INITIALIZE,
     TEXT_DOCUMENT_DID_OPEN,
     SHUTDOWN,
-)
-from pygls.lsp.types import (
-    ClientCapabilities,
-    InitializeParams,
-    DidOpenTextDocumentParams,
-    TextDocumentItem,
 )
 from pygls.server import LanguageServer
 import pytest
@@ -497,7 +496,9 @@ def salt_client_server():
         args=(os.fdopen(csr, "rb"), os.fdopen(scw, "wb")),
     )
     server_thread.daemon = True
-    client = LanguageServer(asyncio.new_event_loop())
+    client = LanguageServer(
+        loop=asyncio.new_event_loop(), version="0.0.1", name="test_server"
+    )
     client_thread = Thread(
         target=client.start_io,
         args=(os.fdopen(scr, "rb"), os.fdopen(csw, "wb")),
@@ -509,7 +510,7 @@ def salt_client_server():
 
     client_thread.start()
 
-    response = client.lsp.send_request(
+    response: InitializeResult = client.lsp.send_request(
         INITIALIZE,
         InitializeParams(
             process_id=12345,
@@ -518,7 +519,7 @@ def salt_client_server():
         ),
     ).result(timeout=CALL_TIMEOUT)
 
-    assert "capabilities" in response
+    assert response.capabilities
 
     yield client, server
 
