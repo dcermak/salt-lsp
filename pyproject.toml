@@ -20,7 +20,7 @@ mypy = ">=0.812"
 pylint = ">=2.7.4"
 pyfakefs = ">=4.4.0"
 salt = "^3005"
-pytest-testinfra = "^6.7.0"
+pytest-testinfra = ">=6.7.0"
 types-PyYAML = "^6"
 
 [tool.poetry.scripts]
