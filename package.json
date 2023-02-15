@@ -73,6 +73,6 @@
     "vscode": "^1.1.36"
   },
   "dependencies": {
-    "vscode-languageclient": "^7"
+    "vscode-languageclient": "^8"
   }
 }
