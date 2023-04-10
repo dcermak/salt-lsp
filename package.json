@@ -68,7 +68,7 @@
   },
   "devDependencies": {
     "@types/node": "^18",
-    "typescript": "^4",
+    "typescript": "^5",
     "vsce": "^2",
     "vscode": "^1.1.36"
   },
