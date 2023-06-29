@@ -9,6 +9,20 @@
 
 Salt Language Server Protocol Server
 
+## History & Current State
+
+This is a Hackweek project of [Cédric Bosdonnat](https://github.com/cbosdo) and
+[Dan Čermák](https://github.com/dcermak) that reached an early prototype
+state. However, we never really managed to handle Jinja2 templating in `sls`
+files (see [`salt-lsp#31`](https://github.com/dcermak/salt-lsp/pull/31)) which
+is a requirement for this project to be even remotely useful.
+
+Unfortunately neither of the two original authors currently have the time to
+keep this project alive. If you wish to help out, please open an issue or send a
+pull request fixing the existing bugs/shortcomings.
+
+As of now, here be 🐉.
+
 
 ## Prerequisites
 
