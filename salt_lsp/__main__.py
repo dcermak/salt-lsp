@@ -25,7 +25,7 @@ def loglevel_from_str(level: str) -> int:
     return LOG_LEVEL_DICT[level.lower()]
 
 
-def add_arguments(parser):
+def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.description = "salt state server"
 
     parser.add_argument(
@@ -53,7 +53,7 @@ def add_arguments(parser):
     )
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     add_arguments(parser)
     args = parser.parse_args()

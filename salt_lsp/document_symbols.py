@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 import itertools
 from typing import Callable, Dict, List, Sequence, TypedDict, cast
 
-from pygls.lsp import types
+from lsprotocol import types
 
 from salt_lsp.parser import (
     AstNode,
@@ -197,7 +197,6 @@ class Visitor:
 def tree_to_document_symbols(
     tree: Tree, state_completions: CompletionsDict
 ) -> List[types.DocumentSymbol]:
-
     res = []
 
     for elem in itertools.chain.from_iterable(
