@@ -59,14 +59,12 @@ class SaltServer(LanguageServer):
     def post_init(
         self,
         state_name_completions: Dict[str, StateNameCompletion],
-        log_level=logging.DEBUG,
     ) -> None:
         """Further initialisation, called after
         setup_salt_server_capabilities."""
         self._state_name_completions = state_name_completions
         self._state_names = list(state_name_completions.keys())
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(log_level)
 
     def complete_state_name(
         self, params: types.CompletionParams
