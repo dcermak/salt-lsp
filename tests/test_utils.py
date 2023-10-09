@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from pygls.lsp import types
+from lsprotocol import types
 
 from salt_lsp.utils import (
     ast_node_to_range,

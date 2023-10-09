@@ -1,6 +1,7 @@
 """
 Module defining and building an AST from the SLS file.
 """
+
 from __future__ import annotations
 
 import logging

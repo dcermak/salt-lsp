@@ -2,6 +2,7 @@
 Implementation of the DocumentSymbolsRequest, see:
 https://microsoft.github.io/language-server-protocol/specification#textDocument_documentSymbol
 """
+
 from dataclasses import dataclass, field
 import itertools
 from typing import Callable, Dict, List, Sequence, TypedDict, cast
@@ -197,7 +198,6 @@ class Visitor:
 def tree_to_document_symbols(
     tree: Tree, state_completions: CompletionsDict
 ) -> List[types.DocumentSymbol]:
-
     res = []
 
     for elem in itertools.chain.from_iterable(

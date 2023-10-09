@@ -2,20 +2,20 @@
 contents utilizing the existing Workspace implementation from pygls.
 
 """
-from logging import getLogger, Logger, DEBUG
-from pathlib import Path
+
 import sys
+from logging import DEBUG, Logger, getLogger
+from pathlib import Path
 from typing import List, Optional, Union
 
 from pygls.lsp import types
 from pygls.protocol import LanguageServerProtocol
 from pygls.workspace import Workspace
 
-from salt_lsp.base_types import CompletionsDict, SLS_LANGUAGE_ID
-from salt_lsp.utils import UriDict, FileUri, get_top
-from salt_lsp.parser import parse, Tree
+from salt_lsp.base_types import SLS_LANGUAGE_ID, CompletionsDict
 from salt_lsp.document_symbols import tree_to_document_symbols
-
+from salt_lsp.parser import Tree, parse
+from salt_lsp.utils import FileUri, UriDict, get_top
 
 if sys.version_info[1] <= 8:
 
@@ -154,11 +154,10 @@ class SlsFileWorkspace(Workspace):
 
     def _get_workspace_of_document(self, uri: Union[str, FileUri]) -> FileUri:
         for workspace_uri in self._folders:
-
             if is_relative_to(
                 Path(FileUri(uri).path), Path(FileUri(workspace_uri).path)
             ):
-                return workspace_uri
+                return FileUri(workspace_uri)
 
         return self.root_uri
 
