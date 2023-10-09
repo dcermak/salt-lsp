@@ -245,7 +245,7 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
             uri=params.text_document.uri,
             language_id=SLS_LANGUAGE_ID,
             text=params.text_document.text or "",
-            version=doc.version,
+            version=doc.version or 0,
         )
 
     @server.feature(TEXT_DOCUMENT_DOCUMENT_SYMBOL)
