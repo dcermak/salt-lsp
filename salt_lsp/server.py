@@ -22,6 +22,7 @@ from lsprotocol.types import (
 )
 from pygls.server import LanguageServer
 
+from salt_lsp import __version__
 from salt_lsp import utils
 from salt_lsp.base_types import StateNameCompletion, SLS_LANGUAGE_ID
 from salt_lsp.workspace import SaltLspProto, SlsFileWorkspace
@@ -39,7 +40,9 @@ class SaltServer(LanguageServer):
     LINE_START_REGEX = re.compile(r"^(\s*)\b", re.MULTILINE)
 
     def __init__(self) -> None:
-        super().__init__(protocol_cls=SaltLspProto)
+        super().__init__(
+            name="SaltStack", version=__version__, protocol_cls=SaltLspProto
+        )
 
         self._state_name_completions: Dict[str, StateNameCompletion] = {}
 
