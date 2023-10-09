@@ -7,20 +7,18 @@ import re
 from os.path import basename
 from typing import Dict, List, Optional, Sequence, Tuple, Union, cast
 
-from pygls.lsp import types
-from pygls.lsp.methods import (
-    COMPLETION,
-    INITIALIZE,
-    TEXT_DOCUMENT_DID_OPEN,
-    DEFINITION,
-    DOCUMENT_SYMBOL,
-)
-from pygls.lsp.types import (
+from lsprotocol import types
+from lsprotocol.types import (
     CompletionItem,
     CompletionList,
     CompletionOptions,
     CompletionParams,
     InitializeParams,
+    INITIALIZE,
+    TEXT_DOCUMENT_COMPLETION,
+    TEXT_DOCUMENT_DID_OPEN,
+    TEXT_DOCUMENT_DEFINITION,
+    TEXT_DOCUMENT_DOCUMENT_SYMBOL,
 )
 from pygls.server import LanguageServer
 
@@ -77,7 +75,7 @@ class SaltServer(LanguageServer):
             and params.context.trigger_character == "."
         )
 
-        doc = self.workspace.get_document(params.text_document.uri)
+        doc = self.workspace.get_text_document(params.text_document.uri)
         contents = doc.source
         ind = doc.offset_at_position(params.position)
         last_match = utils.get_last_element_of_iterator(
@@ -168,7 +166,8 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
         server.logger.debug("Replaced workspace with SlsFileWorkspace")
 
     @server.feature(
-        COMPLETION, CompletionOptions(trigger_characters=["-", "."])
+        TEXT_DOCUMENT_COMPLETION,
+        CompletionOptions(trigger_characters=["-", "."]),
     )
     def completions(
         salt_server: SaltServer, params: CompletionParams
@@ -210,7 +209,7 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
             )
         return None
 
-    @server.feature(DEFINITION)
+    @server.feature(TEXT_DOCUMENT_DEFINITION)
     def goto_definition(
         salt_server: SaltServer, params: types.DeclarationParams
     ) -> Optional[types.Location]:
@@ -240,7 +239,8 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
             "adding text document '%s' to the workspace",
             params.text_document.uri,
         )
-        doc = salt_server.workspace.get_document(params.text_document.uri)
+        doc = salt_server.workspace.get_text_document(params.text_document.uri)
+        salt_server.workspace.put_text_document(params.text_document)
         return types.TextDocumentItem(
             uri=params.text_document.uri,
             language_id=SLS_LANGUAGE_ID,
@@ -248,7 +248,7 @@ def setup_salt_server_capabilities(server: SaltServer) -> None:
             version=doc.version,
         )
 
-    @server.feature(DOCUMENT_SYMBOL)
+    @server.feature(TEXT_DOCUMENT_DOCUMENT_SYMBOL)
     def document_symbol(
         salt_server: SaltServer, params: types.DocumentSymbolParams
     ) -> Optional[

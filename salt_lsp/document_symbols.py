@@ -3,26 +3,26 @@ Implementation of the DocumentSymbolsRequest, see:
 https://microsoft.github.io/language-server-protocol/specification#textDocument_documentSymbol
 """
 
-from dataclasses import dataclass, field
 import itertools
+from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Sequence, TypedDict, cast
 
-from pygls.lsp import types
+from lsprotocol import types
 
+from salt_lsp.base_types import CompletionsDict
 from salt_lsp.parser import (
     AstNode,
-    Tree,
-    Optional,
+    ExtendNode,
     IncludeNode,
     IncludesNode,
-    StateParameterNode,
-    StateCallNode,
-    StateNode,
+    Optional,
     RequisiteNode,
     RequisitesNode,
-    ExtendNode,
+    StateCallNode,
+    StateNode,
+    StateParameterNode,
+    Tree,
 )
-from salt_lsp.base_types import CompletionsDict
 from salt_lsp.utils import ast_node_to_range
 
 
