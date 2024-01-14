@@ -16,12 +16,12 @@ jobs:
     name: run tests for python ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4.5.0
+      - uses: actions/setup-python@v4.7.0
         with:
           python-version: ${{ matrix.python-version }}
 
       - uses: Gr1N/setup-poetry@v8
-      - uses: actions/cache@v3.2.3
+      - uses: actions/cache@v3.3.1
         with:
           path: ~/.cache/pypoetry/virtualenvs
           key: poetry-${{ hashFiles('poetry.lock') }}
@@ -56,10 +56,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4.5.0
+      - uses: actions/setup-python@v4.7.0
 
       - uses: Gr1N/setup-poetry@v8
-      - uses: actions/cache@v3.2.3
+      - uses: actions/cache@v3.3.3
         with:
           path: ~/.cache/pypoetry/virtualenvs
           key: poetry-${{ hashFiles('poetry.lock') }}

@@ -16,34 +16,26 @@
  * limitations under the License.
  * ----------------------------------------------------------------------- */
 
-import { spawn } from "child_process";
+import {spawn} from "child_process";
 import * as net from "net";
-import { ExtensionContext, window, workspace } from "vscode";
+import {ExtensionContext, window, workspace, commands} from "vscode";
 import {
   LanguageClient,
   LanguageClientOptions,
   ServerOptions,
+  Disposable,
 } from "vscode-languageclient/node";
 
 class ProcessError extends Error {
-  constructor(
-    public readonly command: string,
-    public readonly returnCode: number | null,
-    public readonly stdout: any[],
-    public readonly stderr: any[]
-  ) {
-    super(
-      `${command} failed with code=${
-        returnCode ?? "null"
-      }, stdout='${stdout.join("\n")}', stderr='${stderr.join("\n")}'`
-    );
+  constructor(public readonly command: string, public readonly returnCode: number|null,
+              public readonly stdout: any[], public readonly stderr: any[]) {
+    super(`${command} failed with code=${
+        returnCode ??
+        "null"}, stdout='${stdout.join("\n")}', stderr='${stderr.join("\n")}'`);
   }
 }
 
-export function runProcess(
-  command: string,
-  args?: readonly string[]
-): Promise<string> {
+export function runProcess(command: string, args?: readonly string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args);
 
@@ -60,9 +52,7 @@ export function runProcess(
       }
     });
 
-    child.on("error", (err) => {
-      reject(err);
-    });
+    child.on("error", (err) => { reject(err); });
   });
 }
 
@@ -70,18 +60,16 @@ let client: LanguageClient;
 
 function getClientOptions(): LanguageClientOptions {
   return {
-    // Register the server for sls files
-    documentSelector: [
-      { scheme: "file", language: "sls" },
-      { scheme: "untitled", language: "sls" },
+      // Register the server for sls files
+    documentSelector : [
+      {scheme : "file", language : "sls"},
+      {scheme : "untitled", language : "sls"},
     ],
-    outputChannelName: "[salt_lsp] SaltStateLanguageServer",
+    outputChannelName : "[salt_lsp] SaltStateLanguageServer",
   };
 }
 
-function isStartedInDebugMode(): boolean {
-  return process.env.VSCODE_DEBUG_MODE === "true";
-}
+function isStartedInDebugMode(): boolean { return process.env.VSCODE_DEBUG_MODE === "true"; }
 
 let clientSocket: net.Socket;
 
@@ -92,24 +80,17 @@ function startLangServerTCP(addr: number): LanguageClient {
 
       clientSocket.connect(addr, "127.0.0.1", () => {
         resolve({
-          reader: clientSocket,
-          writer: clientSocket,
+          reader : clientSocket,
+          writer : clientSocket,
         });
       });
 
-      clientSocket.on("close", () => {
-        setTimeout(() => {
-          clientSocket.connect(addr, "127.0.0.1");
-        }, 1000);
-      });
+      clientSocket.on(
+          "close", () => { setTimeout(() => { clientSocket.connect(addr, "127.0.0.1"); }, 1000); });
     });
   };
 
-  return new LanguageClient(
-    `tcp lang server (port ${addr})`,
-    serverOptions,
-    getClientOptions()
-  );
+  return new LanguageClient(`tcp lang server (port ${addr})`, serverOptions, getClientOptions());
 }
 
 function startLangServer(command: string, args: string[]): LanguageClient {
@@ -121,45 +102,69 @@ function startLangServer(command: string, args: string[]): LanguageClient {
   return new LanguageClient(command, serverOptions, getClientOptions());
 }
 
-export async function activate(context: ExtensionContext): Promise<void> {
-  if (isStartedInDebugMode()) {
-    client = startLangServerTCP(2087);
-  } else {
-    const pythonPath = workspace
-      .getConfiguration("python")
-      .get<string>("pythonPath");
 
-    if (pythonPath === undefined) {
+export async function activate(context: ExtensionContext){
+  let disposableClient: Disposable;
+  const startLSPServer = async () => {
+    if (isStartedInDebugMode()) {
+      client = startLangServerTCP(2087);
+    } else {
+      const pythonPath = workspace
+        .getConfiguration("python")
+        .get<string>("pythonPath");
+
+      if (pythonPath === undefined) {
+        try {
+          await runProcess("python3", ["--version"]);
+        } catch {
+          const errMsg =
+            "'python.pythonPath' not set and could not launch python. Please install python to be able to use this Language Server";
+          await window.showErrorMessage(errMsg);
+          throw new Error(errMsg);
+        }
+      }
+
+      const python = pythonPath ?? "python3";
+
       try {
-        await runProcess("python3", ["--version"]);
-      } catch {
-        const errMsg =
-          "'python.pythonPath' not set and could not launch python. Please install python to be able to use this Language Server";
+        await runProcess(python, ["-m", "salt_lsp", "--stop-after-init"]);
+      } catch (exc) {
+        const errMsg = `Could not launch the Salt Language Server, got the following error: ${(
+          exc as ProcessError
+        ).toString()}.
+
+  You might have to install salt_lsp via 'pip install salt_lsp'.`;
         await window.showErrorMessage(errMsg);
         throw new Error(errMsg);
       }
+
+      client = startLangServer(python, ["-m", "salt_lsp"]);
     }
-
-    const python = pythonPath ?? "python3";
-
-    try {
-      await runProcess(python, ["-m", "salt_lsp", "--stop-after-init"]);
-    } catch (exc) {
-      const errMsg = `Could not launch the Salt Language Server, got the following error: ${(
-        exc as ProcessError
-      ).toString()}.
-
-You might have to install salt_lsp via 'pip install salt_lsp'.`;
-      await window.showErrorMessage(errMsg);
-      throw new Error(errMsg);
-    }
-
-    client = startLangServer(python, ["-m", "salt_lsp"]);
+    disposableClient = client
   }
 
-  context.subscriptions.push(client.start());
+  const restartLanguageServer = function (): Promise<void> {
+    return new Promise((resolve) => {
+      if (disposableClient) {
+        client.stop().then(() => {
+          disposableClient.dispose();
+          startLSPServer();
+          resolve();
+        });
+      } else {
+        startLSPServer();
+        resolve();
+      }
+    });
+  }
+
+  var disposableRestart = commands.registerCommand('salt-lsp.restart', () => {
+    restartLanguageServer().then(() => {
+      window.showInformationMessage('Salt-lsp server restarted.');
+    });
+  });
+  context.subscriptions.push(disposableRestart);
+  await startLSPServer()
 }
 
-export function deactivate(): Thenable<void> {
-  return client ? client.stop() : Promise.resolve();
-}
+export function deactivate(): Thenable<void> { return client ? client.stop() : Promise.resolve(); }
