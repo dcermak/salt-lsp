@@ -1,14 +1,13 @@
 import asyncio
 from threading import Thread
 import os
+import time
 
-from pygls.lsp.methods import (
-    EXIT,
-    INITIALIZE,
+from lsprotocol.types import (
     TEXT_DOCUMENT_DID_OPEN,
     SHUTDOWN,
-)
-from pygls.lsp.types import (
+    EXIT,
+    INITIALIZE,
     ClientCapabilities,
     InitializeParams,
     DidOpenTextDocumentParams,
@@ -497,7 +496,9 @@ def salt_client_server():
         args=(os.fdopen(csr, "rb"), os.fdopen(scw, "wb")),
     )
     server_thread.daemon = True
-    client = LanguageServer(asyncio.new_event_loop())
+    client = LanguageServer(
+        name="salt_lps_test", version="v0.0.1", loop=asyncio.new_event_loop()
+    )
     client_thread = Thread(
         target=client.start_io,
         args=(os.fdopen(scr, "rb"), os.fdopen(csw, "wb")),
@@ -518,7 +519,7 @@ def salt_client_server():
         ),
     ).result(timeout=CALL_TIMEOUT)
 
-    assert "capabilities" in response
+    assert getattr(response, "capabilities")
 
     yield client, server
 
@@ -641,7 +642,7 @@ def open_file(
     client: LanguageServer, file_path: str, request_timeout: int = 5
 ) -> None:
     with open(file_path) as base_sls:
-        client.lsp.send_request(
+        client.lsp.notify(
             TEXT_DOCUMENT_DID_OPEN,
             DidOpenTextDocumentParams(
                 text_document=TextDocumentItem(
@@ -651,4 +652,7 @@ def open_file(
                     text=base_sls.read(-1),
                 )
             ),
-        ).result(timeout=request_timeout)
+        )
+        # Client is supposed to wait for the notification that the file has been
+        # properly added but for the need of the test we take some shortcut
+        time.sleep(1)

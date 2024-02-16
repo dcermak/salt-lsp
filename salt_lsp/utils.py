@@ -21,7 +21,7 @@ from typing import (
 )
 from urllib.parse import urlparse, ParseResult
 
-from pygls.lsp.types import Position, Range
+from lsprotocol.types import Position, Range
 
 from salt_lsp import parser
 from salt_lsp.parser import AstNode, Tree

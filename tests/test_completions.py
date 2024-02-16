@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+from lsprotocol.types import TextDocumentItem
+
 from conftest import MODULE_DOCS
 
 
@@ -22,11 +24,11 @@ git -C /srv/salt pull -q:
 def test_complete_of_file(salt_client_server, file_name_completer):
     _, server = salt_client_server
     txt_doc = {
-        "text_document": SimpleNamespace(
-            uri="foo.sls", text=TEST_FILE, version=0
+        "text_document": TextDocumentItem(
+            uri="foo.sls", text=TEST_FILE, version=0, language_id="sls"
         ),
     }
-    server.workspace.put_document(txt_doc["text_document"])
+    server.workspace.put_text_document(txt_doc["text_document"])
 
     completions = server.complete_state_name(
         SimpleNamespace(

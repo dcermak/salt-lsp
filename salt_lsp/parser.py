@@ -1,6 +1,7 @@
 """
 Module defining and building an AST from the SLS file.
 """
+
 from __future__ import annotations
 
 import logging
@@ -9,7 +10,7 @@ from dataclasses import dataclass, field
 from os.path import abspath, dirname, exists, isdir, join
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union, cast
 
-from pygls.lsp import types
+from lsprotocol import types
 import yaml
 from yaml.tokens import BlockEndToken, ScalarToken
 
